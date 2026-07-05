@@ -263,6 +263,17 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
             </Field>
 
             <Field>
+              <FieldLabel htmlFor="location">Location preferences</FieldLabel>
+              <div className="relative">
+                <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input id="location" className="pl-9" value={state.locations} onChange={(e) => set("locations", e.target.value)} />
+              </div>
+              <FieldDescription>Add cities or &quot;Remote&quot; regions.</FieldDescription>
+            </Field>
+
+            <Separator />
+
+            <Field>
               <FieldLabel>
                 Target salary range
                 <Badge variant="secondary" className="ml-2 tabular-nums text-primary">
@@ -286,20 +297,9 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
               <FieldDescription>Roles below your floor are auto-rejected by the Resume Scorer Agent.</FieldDescription>
             </Field>
 
-            <Separator />
-
-            <Field>
-              <FieldLabel htmlFor="location">Location preferences</FieldLabel>
-              <div className="relative">
-                <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="location" className="pl-9" value={state.locations} onChange={(e) => set("locations", e.target.value)} />
-              </div>
-              <FieldDescription>Add cities or &quot;Remote&quot; regions.</FieldDescription>
-            </Field>
-
             <Field orientation="horizontal">
               <Button onClick={save} disabled={isPending}>
-                {isPending ? "Saving..." : "Save target roles"}
+                {isPending ? "Saving..." : "Save match settings"}
               </Button>
               <Button variant="ghost" className="text-muted-foreground" onClick={() => {
                 set("titles", "Senior Product Manager, Group PM, Principal PM")
