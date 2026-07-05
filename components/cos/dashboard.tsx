@@ -4,7 +4,6 @@ import { useState } from "react"
 import { Menu, Bell, Search } from "lucide-react"
 import { AppSidebar, type ViewKey } from "@/components/cos/app-sidebar"
 import { CommandCenter } from "@/components/cos/command-center"
-import { StaffOrganization } from "@/components/cos/staff-organization"
 import { Directives } from "@/components/cos/directives"
 import { Matches } from "@/components/cos/matches"
 import { Button } from "@/components/ui/button"
@@ -14,8 +13,8 @@ import type { DirectivesDoc, AgentDoc, MatchDoc } from "@/lib/actions"
 const TITLES: Record<ViewKey, string> = {
   command: "Command Center",
   staff: "Staff Organization",
-  directives: "Directives & Criteria",
-  matches: "Matches & Outreach",
+  directives: "Settings",
+  matches: "Matches & Cover Letters",
 }
 
 interface DashboardProps {
@@ -103,13 +102,11 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
-          {view === "command" && <CommandCenter onNavigate={navigate} />}
-          {view === "staff" && (
-            <StaffOrganization initialAgentConfigs={initialAgentConfigs} />
-          )}
+          {view === "command" && <CommandCenter onNavigate={navigate} profileName={initialDirectives?.name} />}
           {view === "directives" && (
             <Directives
               initialDirectives={initialDirectives}
+              initialAgentConfigs={initialAgentConfigs}
               defaultTab={directivesTab}
             />
           )}

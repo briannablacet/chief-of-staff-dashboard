@@ -1,11 +1,15 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Target, Ban, FileText, Building2, MapPin, Link2, Plus, X, UploadCloud, User } from "lucide-react"
+import { Target, Ban, FileText, Building2, MapPin, Link2, Plus, X, UploadCloud, User, Terminal, Users } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-import { saveDirectives } from "@/lib/actions"
-import type { DirectivesDoc } from "@/lib/actions"
+import { saveDirectives, saveAgentConfig } from "@/lib/actions"
+import type { DirectivesDoc, AgentDoc } from "@/lib/actions"
+import { agents, type AgentKey } from "@/lib/cos-data"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,10 +19,6 @@ import { Separator } from "@/components/ui/separator"
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 interface DirectivesState {
   name: string
@@ -37,16 +37,13 @@ interface DirectivesState {
 
 interface DirectivesProps {
   initialDirectives: DirectivesDoc | null
+  initialAgentConfigs: AgentDoc[]
   defaultTab?: string
 }
 
-// ---------------------------------------------------------------------------
-// Root component
-// ---------------------------------------------------------------------------
-
-export function Directives({ initialDirectives, defaultTab }: DirectivesProps) {
+export function Directives({ initialDirectives, initialAgentConfigs, defaultTab }: DirectivesProps) {
   const d = initialDirectives
-  const [activeTab, setActiveTab] = useState(defaultTab ?? "targets")
+  const [activeTab, setActiveTab] = useState(defaultTab ?? "resume")
 
   const [state, setState] = useState<DirectivesState>({
     name: d?.name ?? "",
@@ -85,55 +82,62 @@ export function Directives({ initialDirectives, defaultTab }: DirectivesProps) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">Directives &amp; Criteria</h1>
+        <h1 className="text-xl font-semibold text-foreground">Settings</h1>
+        <p className="text-sm font-medium text-foreground/80">Configure your job search.</p>
         <p className="text-sm text-muted-foreground">
-          Configure your job search criteria, target companies, and profile for your agents.
+          Set up your profile, target roles, dream companies, and dealbreakers.
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-6">
-        <TabsList className="w-full max-w-xl">
-          <TabsTrigger value="targets">
-            <Target data-icon="inline-start" />
-            Job Targets
-          </TabsTrigger>
-          <TabsTrigger value="dealbreakers">
-            <Ban data-icon="inline-start" />
-            Settings
-          </TabsTrigger>
+        <TabsList className="w-full max-w-3xl">
           <TabsTrigger value="resume">
             <FileText data-icon="inline-start" />
             Resume &amp; Profile
           </TabsTrigger>
+          <TabsTrigger value="targets">
+            <Target data-icon="inline-start" />
+            Target Roles
+          </TabsTrigger>
+          <TabsTrigger value="companies">
+            <Building2 data-icon="inline-start" />
+            Dream Companies
+          </TabsTrigger>
+          <TabsTrigger value="dealbreakers">
+            <Ban data-icon="inline-start" />
+            Dealbreakers
+          </TabsTrigger>
+          <TabsTrigger value="agents">
+            <Users data-icon="inline-start" />
+            Agents
+          </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="resume">
+          <ResumeTab state={state} set={set} buildPayload={buildPayload} />
+        </TabsContent>
         <TabsContent value="targets">
           <JobTargetsTab state={state} set={set} buildPayload={buildPayload} />
+        </TabsContent>
+        <TabsContent value="companies">
+          <DreamCompaniesTab state={state} set={set} buildPayload={buildPayload} />
         </TabsContent>
         <TabsContent value="dealbreakers">
           <DealbreakersTab state={state} set={set} buildPayload={buildPayload} />
         </TabsContent>
-        <TabsContent value="resume">
-          <ResumeTab state={state} set={set} buildPayload={buildPayload} />
+        <TabsContent value="agents">
+          <AgentsTab initialAgentConfigs={initialAgentConfigs} />
         </TabsContent>
       </Tabs>
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Shared tab props
-// ---------------------------------------------------------------------------
-
 interface TabProps {
   state: DirectivesState
   set: <K extends keyof DirectivesState>(key: K, value: DirectivesState[K]) => void
   buildPayload: () => Omit<DirectivesDoc, "_id" | "userId" | "updatedAt">
 }
-
-// ---------------------------------------------------------------------------
-// Job Targets tab
-// ---------------------------------------------------------------------------
 
 function JobTargetsTab({ state, set, buildPayload }: TabProps) {
   const [isPending, startTransition] = useTransition()
@@ -216,9 +220,48 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Settings tab (companies + dealbreakers)
-// ---------------------------------------------------------------------------
+function DreamCompaniesTab({ state, set, buildPayload }: TabProps) {
+  const [isPending, startTransition] = useTransition()
+
+  const save = () => {
+    startTransition(async () => {
+      try {
+        await saveDirectives(buildPayload())
+        toast.success("Dream companies saved")
+      } catch {
+        toast.error("Failed to save")
+      }
+    })
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+            <Building2 className="size-4" />
+          </span>
+          <div>
+            <CardTitle className="text-base">Dream Companies</CardTitle>
+            <CardDescription>Your Networking Agent prioritizes outreach to these companies. Add any you&apos;d love to work at.</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <FieldGroup>
+          <Field>
+            <TagInput tags={state.dreamCompanies} onChange={(tags) => set("dreamCompanies", tags)} placeholder="Add a company..." tone="primary" icon={Building2} />
+          </Field>
+          <Field orientation="horizontal">
+            <Button onClick={save} disabled={isPending}>
+              {isPending ? "Saving..." : "Save dream companies"}
+            </Button>
+          </Field>
+        </FieldGroup>
+      </CardContent>
+    </Card>
+  )
+}
 
 function DealbreakersTab({ state, set, buildPayload }: TabProps) {
   const [isPending, startTransition] = useTransition()
@@ -227,7 +270,7 @@ function DealbreakersTab({ state, set, buildPayload }: TabProps) {
     startTransition(async () => {
       try {
         await saveDirectives(buildPayload())
-        toast.success("Settings saved")
+        toast.success("Dealbreakers saved")
       } catch {
         toast.error("Failed to save")
       }
@@ -235,55 +278,33 @@ function DealbreakersTab({ state, set, buildPayload }: TabProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                <Building2 className="size-4" />
-              </span>
-              <div>
-                <CardTitle className="text-base">Dream Companies</CardTitle>
-                <CardDescription>Your Networking Agent prioritizes these.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <TagInput tags={state.dreamCompanies} onChange={(tags) => set("dreamCompanies", tags)} placeholder="Add a company..." tone="primary" icon={Building2} />
-          </CardContent>
-        </Card>
-
-        <Card className="border-destructive/30">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
-                <Ban className="size-4" />
-              </span>
-              <div>
-                <CardTitle className="text-base">Anti-List / Dealbreakers</CardTitle>
-                <CardDescription>Any match tripping these is auto-rejected.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
+    <Card className="border-destructive/30">
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+            <Ban className="size-4" />
+          </span>
+          <div>
+            <CardTitle className="text-base">Dealbreakers</CardTitle>
+            <CardDescription>Any match that trips one of these is auto-rejected by the Resume Scorer Agent.</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <FieldGroup>
+          <Field>
             <TagInput tags={state.dealbreakers} onChange={(tags) => set("dealbreakers", tags)} placeholder="Add a dealbreaker..." tone="destructive" icon={X} />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="flex gap-2">
-        <Button onClick={save} disabled={isPending}>
-          {isPending ? "Saving..." : "Save target companies and dealbreakers"}
-        </Button>
-      </div>
-    </div>
+          </Field>
+          <Field orientation="horizontal">
+            <Button onClick={save} disabled={isPending}>
+              {isPending ? "Saving..." : "Save dealbreakers"}
+            </Button>
+          </Field>
+        </FieldGroup>
+      </CardContent>
+    </Card>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Resume & Profile tab
-// ---------------------------------------------------------------------------
 
 function ResumeTab({ state, set, buildPayload }: TabProps) {
   const [isPending, startTransition] = useTransition()
@@ -419,16 +440,107 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// TagInput
-// ---------------------------------------------------------------------------
+function AgentsTab({ initialAgentConfigs }: { initialAgentConfigs: AgentDoc[] }) {
+  const [paused, setPaused] = useState<Record<AgentKey, boolean>>(() => {
+    const map: Record<string, boolean> = {}
+    for (const cfg of initialAgentConfigs) map[cfg.agentId] = !cfg.enabled
+    return {
+      scraper: map["scraper"] ?? false,
+      scorer: map["scorer"] ?? false,
+      networking: map["networking"] ?? false,
+      thought: map["thought"] ?? false,
+    }
+  })
+  const [pending, startTransition] = useTransition()
+
+  const toggle = (key: AgentKey, name: string) => {
+    const nextPaused = !paused[key]
+    setPaused((prev) => ({ ...prev, [key]: nextPaused }))
+    startTransition(async () => {
+      try {
+        await saveAgentConfig(key, { enabled: !nextPaused })
+        toast(nextPaused ? `${name} paused` : `${name} resumed`)
+      } catch {
+        setPaused((prev) => ({ ...prev, [key]: !nextPaused }))
+        toast.error("Failed to save agent config")
+      }
+    })
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      {agents.map((agent) => {
+        const Icon = agent.icon
+        const isPaused = paused[agent.key]
+        return (
+          <Card key={agent.key}>
+            <CardHeader>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-11 items-center justify-center rounded-xl bg-accent text-primary">
+                    <Icon className="size-5" />
+                  </span>
+                  <div>
+                    <CardTitle className="text-base">{agent.name}</CardTitle>
+                    <CardDescription>{agent.role}</CardDescription>
+                  </div>
+                </div>
+                <Badge variant="outline" className={isPaused ? "gap-1.5 text-warning" : "gap-1.5 text-success"}>
+                  <span className="relative flex size-2">
+                    {!isPaused && <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />}
+                    <span className={isPaused ? "relative inline-flex size-2 rounded-full bg-warning" : "relative inline-flex size-2 rounded-full bg-success"} />
+                  </span>
+                  {isPaused ? "Paused" : "Active"}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <Terminal className="size-3.5" />
+                  System Instructions
+                </div>
+                <p className="rounded-lg border border-border bg-background/50 p-3 font-mono text-xs leading-relaxed text-muted-foreground">
+                  {agent.systemPrompt}
+                </p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
+                    <Target className="size-3.5" />
+                    Accuracy score
+                  </span>
+                  <span className="font-semibold tabular-nums text-foreground">{agent.accuracy}%</span>
+                </div>
+                <Progress value={agent.accuracy} />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between rounded-lg bg-secondary/40 px-3 py-2.5">
+                <Label htmlFor={`toggle-${agent.key}`} className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-foreground">{isPaused ? "Resume Agent" : "Pause Agent"}</span>
+                  <span className="text-xs text-muted-foreground">{isPaused ? "Currently idle" : "Running autonomously"}</span>
+                </Label>
+                <Switch
+                  id={`toggle-${agent.key}`}
+                  checked={!isPaused}
+                  disabled={pending}
+                  onCheckedChange={() => toggle(agent.key, agent.name)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
 
 function TagInput({ tags, onChange, placeholder, tone, icon: Icon }: {
   tags: string[]
   onChange: (tags: string[]) => void
   placeholder: string
   tone: "primary" | "destructive"
-  icon: typeof X
+  icon: React.ElementType
 }) {
   const [value, setValue] = useState("")
 

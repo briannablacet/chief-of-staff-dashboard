@@ -10,6 +10,7 @@ import {
   Copy,
   Check,
   TrendingUp,
+  RefreshCw,
 } from 'lucide-react'
 import {
   Card,
@@ -32,10 +33,10 @@ const today = new Date().toLocaleDateString('en-US', {
   day: 'numeric',
 })
 
-export function CommandCenter({ onNavigate }: { onNavigate: (v: ViewKey) => void }) {
+export function CommandCenter({ onNavigate, profileName }: { onNavigate: (v: ViewKey) => void; profileName?: string }) {
   return (
     <div className="flex flex-col gap-6">
-      <DailyDigest onNavigate={onNavigate} />
+      <DailyDigest onNavigate={onNavigate} profileName={profileName} />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -91,7 +92,18 @@ export function CommandCenter({ onNavigate }: { onNavigate: (v: ViewKey) => void
   )
 }
 
-function DailyDigest({ onNavigate }: { onNavigate: (v: ViewKey) => void }) {
+function DailyDigest({ onNavigate, profileName }: { onNavigate: (v: ViewKey) => void; profileName?: string }) {
+  const [regenerating, setRegenerating] = useState(false)
+
+  const firstName = profileName?.split(' ')[0] ?? 'there'
+
+  const handleRegenerate = async () => {
+    setRegenerating(true)
+    await new Promise((r) => setTimeout(r, 2000))
+    setRegenerating(false)
+    toast.success('Matches regenerated', { description: 'Your agents have re-scored all active listings.' })
+  }
+
   return (
     <Card className="overflow-hidden border-primary/25 bg-gradient-to-b from-accent/40 to-card">
       <CardHeader>
@@ -113,7 +125,7 @@ function DailyDigest({ onNavigate }: { onNavigate: (v: ViewKey) => void }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Good morning, Alex. Overnight your staff scanned{' '}
+          Good morning, {firstName}. Overnight your staff scanned{' '}
           <span className="font-medium text-foreground">214 new roles</span>, scored 38 against your
           criteria, and mapped 11 warm intro paths into your dream companies. Here are the three
           highest-conviction matches that cleared every filter.
@@ -149,7 +161,16 @@ function DailyDigest({ onNavigate }: { onNavigate: (v: ViewKey) => void }) {
       </CardContent>
       <CardFooter className="flex flex-wrap gap-2 border-t border-border">
         <Button size="sm" onClick={() => onNavigate('matches')}>
-          View Details
+          View All Matches
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={regenerating}
+          onClick={handleRegenerate}
+        >
+          <RefreshCw data-icon="inline-start" className={regenerating ? 'animate-spin' : ''} />
+          {regenerating ? 'Regenerating...' : 'Regenerate Matches'}
         </Button>
         <Button
           size="sm"
