@@ -37,6 +37,7 @@ export async function POST(_req: NextRequest) {
       .collection<DirectivesDoc>("directives")
       .findOne({ userId: USER_ID })
 
+    console.log("[v0] Pipeline: directives found:", !!directives, "titles:", directives?.titles)
     if (!directives) {
       return NextResponse.json({ error: "No directives configured" }, { status: 400 })
     }
@@ -81,6 +82,7 @@ export async function POST(_req: NextRequest) {
     const allJobs: RawJob[] = [...adzunaJobs, ...remotiveJobs]
     const newJobs = allJobs.filter((j) => !existingIds.has(j.sourceId))
 
+    console.log("[v0] Pipeline: adzuna", adzunaJobs.length, "remotive", remotiveJobs.length, "total", allJobs.length, "new", newJobs.length)
 
     if (!newJobs.length) {
       await recordLastRun(db)
@@ -122,6 +124,7 @@ export async function POST(_req: NextRequest) {
 
 
 
+    console.log("[v0] Pipeline: scored matches:", scored.length)
     // ------------------------------------------------------------------
     // 6. Generate cover letters
     // ------------------------------------------------------------------
@@ -151,7 +154,7 @@ export async function POST(_req: NextRequest) {
       newFound: newJobs.length,
     })
   } catch (err) {
-
+    console.log("[v0] Pipeline fatal error:", err instanceof Error ? err.message : err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }
