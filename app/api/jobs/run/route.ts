@@ -5,9 +5,9 @@
  *   1. Load user's directives from MongoDB
  *   2. Fetch raw jobs from Adzuna + Remotive
  *   3. Deduplicate against already-saved matches
- *   4. Score each job with GPT-4.1 (score + breakdown)
+ *   4. Score each job with deterministic keyword matching (fast, free, no rate limits)
  *   5. Filter out dealbreakers and jobs below minMatchScore
- *   6. Generate a cover letter for each passing job
+ *   6. Generate a cover letter for each passing job (single LLM call per match)
  *   7. Save new matches to MongoDB
  *   8. Record last-run timestamp on the agent config
  *
@@ -15,15 +15,13 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-import { generateText, generateObject, zodSchema } from "ai"
-import { z } from "zod"
+import { generateText } from "ai"
 import { getDb } from "@/lib/mongodb"
 import { fetchAdzunaJobs, fetchRemotiveJobs, type RawJob } from "@/lib/job-fetcher"
 import type { DirectivesDoc, MatchDoc, AgentDoc } from "@/lib/actions"
 
 const USER_ID = "default"
 
-// How long the route is allowed to run (Vercel Pro = 300s, Hobby = 60s)
 export const maxDuration = 300
 
 export async function POST(_req: NextRequest) {
@@ -37,7 +35,6 @@ export async function POST(_req: NextRequest) {
       .collection<DirectivesDoc>("directives")
       .findOne({ userId: USER_ID })
 
-    console.log("[v0] Pipeline: directives found:", !!directives, "titles:", directives?.titles)
     if (!directives) {
       return NextResponse.json({ error: "No directives configured" }, { status: 400 })
     }
@@ -49,7 +46,7 @@ export async function POST(_req: NextRequest) {
       salaryMin = 0,
       dealbreakers = [],
       dailyMatchLimit = 10,
-      minMatchScore = 70,
+      minMatchScore = 60,
       resumeText = "",
       resumes = [],
       name: userName = "the applicant",
@@ -82,61 +79,53 @@ export async function POST(_req: NextRequest) {
     const allJobs: RawJob[] = [...adzunaJobs, ...remotiveJobs]
     const newJobs = allJobs.filter((j) => !existingIds.has(j.sourceId))
 
-    console.log("[v0] Pipeline: adzuna", adzunaJobs.length, "remotive", remotiveJobs.length, "total", allJobs.length, "new", newJobs.length)
-
     if (!newJobs.length) {
       await recordLastRun(db)
       return NextResponse.json({ saved: 0, message: "No new jobs found" })
     }
 
     // ------------------------------------------------------------------
-    // 4 & 5. Score each job + filter — cap at dailyMatchLimit * 3 candidates
+    // 4 & 5. Score with keyword matching + filter
     // ------------------------------------------------------------------
-    const candidates = newJobs.slice(0, dailyMatchLimit * 3)
-    const scored: MatchDoc[] = []
+    const scored: { match: MatchDoc; score: number }[] = []
 
-    for (const job of candidates) {
-      try {
-        const result = await scoreJob(job, directives)
-        if (!result) continue
+    for (const job of newJobs.slice(0, dailyMatchLimit * 4)) {
+      const result = scoreJobKeywords(job, directives)
+      if (!result) continue
+      if (result.score < minMatchScore) continue
 
-        // Filter: below score threshold
-        if (result.score < minMatchScore) continue
+      // Dealbreaker filter
+      const descLower = job.description.toLowerCase()
+      const hitsDealbreaker = dealbreakers.some(
+        (d) => d.trim() && descLower.includes(d.trim().toLowerCase())
+      )
+      if (hitsDealbreaker) continue
 
-        // Filter: dealbreakers
-        const descLower = job.description.toLowerCase()
-        const hitsDealbreaker = dealbreakers.some((d) =>
-          d.trim() && descLower.includes(d.trim().toLowerCase())
-        )
-        if (hitsDealbreaker) continue
+      // Salary floor filter
+      if (salaryMin > 0 && result.salaryValue && result.salaryValue < salaryMin) continue
 
-        // Filter: salary floor (if job has a salary and directives has a floor)
-        if (salaryMin > 0 && result.salaryValue && result.salaryValue < salaryMin) continue
-
-        scored.push(result.match)
-      } catch (err) {
-
-      }
-
-      // Stop once we have enough
+      scored.push(result)
       if (scored.length >= dailyMatchLimit) break
     }
 
+    if (!scored.length) {
+      await recordLastRun(db)
+      return NextResponse.json({ saved: 0, message: "No matches above score threshold" })
+    }
 
-
-    console.log("[v0] Pipeline: scored matches:", scored.length)
     // ------------------------------------------------------------------
-    // 6. Generate cover letters
+    // 6. Generate cover letters (one LLM call per match, sequentially)
     // ------------------------------------------------------------------
     const withLetters: MatchDoc[] = []
-    for (const match of scored) {
+    for (const { match } of scored) {
       try {
         const letter = await generateCoverLetter(match, resumeForCoverLetter, userName)
         withLetters.push({ ...match, coverLetter: letter })
-      } catch (err) {
-
-        withLetters.push(match) // save without letter rather than skip
+      } catch {
+        withLetters.push(match) // save without letter rather than skip entirely
       }
+      // Respect rate limits between cover letter calls
+      await new Promise((r) => setTimeout(r, 1500))
     }
 
     // ------------------------------------------------------------------
@@ -154,7 +143,6 @@ export async function POST(_req: NextRequest) {
       newFound: newJobs.length,
     })
   } catch (err) {
-    console.log("[v0] Pipeline fatal error:", err instanceof Error ? err.message : err)
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Unknown error" },
       { status: 500 }
@@ -163,81 +151,152 @@ export async function POST(_req: NextRequest) {
 }
 
 // ---------------------------------------------------------------------------
-// Score a single job against user directives
+// Deterministic keyword scoring — no LLM, no rate limits
 // ---------------------------------------------------------------------------
 
-const ScoreSchema = z.object({
-  score: z.number().min(0).max(100).describe("Overall match score 0-100"),
-  workModel: z.enum(["Remote", "Hybrid", "On-site"]),
-  salaryEstimate: z.string().optional().describe("Salary range if determinable"),
-  salaryValue: z.number().optional().describe("Midpoint salary number for filtering"),
-  breakdown: z.array(z.object({
-    label: z.string(),
-    met: z.boolean(),
-    note: z.string(),
-  })).describe("3-6 scored criteria"),
-})
-
-async function scoreJob(
+function scoreJobKeywords(
   job: RawJob,
   directives: DirectivesDoc
-): Promise<{ match: MatchDoc; score: number; salaryValue?: number } | null> {
-  const { titles, locations, remoteOnly, salaryMin, salaryMax, dealbreakers, name } = directives
+): { match: MatchDoc; score: number; salaryValue?: number } | null {
+  const { titles, locations, remoteOnly, salaryMin, salaryMax } = directives
+  const titleLower = job.title.toLowerCase()
+  const descLower = job.description.toLowerCase()
+  const locationLower = (job.location ?? "").toLowerCase()
 
-  const prompt = `You are an expert job-match evaluator. Score how well this job matches the candidate's preferences.
+  const breakdown: { label: string; met: boolean; note: string }[] = []
+  let score = 0
 
-CANDIDATE PREFERENCES:
-- Target titles: ${titles.join(", ")}
-- Preferred locations: ${locations.length ? locations.join(", ") : "any"}
-- Remote only: ${remoteOnly}
-- Salary range: ${salaryMin ? `$${salaryMin.toLocaleString()}` : "no floor"} – ${salaryMax ? `$${salaryMax.toLocaleString()}` : "no ceiling"}
-- Dealbreakers: ${dealbreakers.length ? dealbreakers.join(", ") : "none"}
-
-JOB POSTING:
-Title: ${job.title}
-Company: ${job.company}
-Location: ${job.location}
-Salary: ${job.salary ?? "not listed"}
-Description:
-${job.description.slice(0, 1500)}
-
-Score this match 0-100. Be strict — 70+ means genuinely good fit. Provide 3-5 specific breakdown criteria.`
-
-  // Small delay to avoid rate-limiting when processing multiple jobs
-  await new Promise((r) => setTimeout(r, 500))
-
-  const { object } = await generateObject({
-    model: "openai/gpt-4.1-mini",
-    schema: zodSchema(ScoreSchema),
-    prompt,
+  // ── Title match (40 pts) ───────────────────────────────────────────────────
+  const titleKeywords = titles.flatMap((t) =>
+    t.toLowerCase().split(/\s+/).filter((w) => w.length > 3)
+  )
+  const uniqueKeywords = [...new Set(titleKeywords)]
+  const matchedKeywords = uniqueKeywords.filter(
+    (kw) => titleLower.includes(kw) || descLower.includes(kw)
+  )
+  const titleScore = Math.min(40, Math.round((matchedKeywords.length / Math.max(uniqueKeywords.length, 1)) * 40))
+  score += titleScore
+  const titleMet = titleScore >= 20
+  breakdown.push({
+    label: "Title alignment",
+    met: titleMet,
+    note: titleMet
+      ? `Matched keywords: ${matchedKeywords.slice(0, 3).join(", ")}`
+      : `Low title match — looking for: ${titles.slice(0, 2).join(", ")}`,
   })
 
-  const postedAgo = formatPostedAgo(job.postedAt)
-  const matchId = job.sourceId
+  // ── Location / remote (20 pts) ────────────────────────────────────────────
+  const isRemoteJob =
+    locationLower.includes("remote") ||
+    descLower.includes("fully remote") ||
+    descLower.includes("work from home") ||
+    descLower.includes("100% remote")
 
+  if (remoteOnly) {
+    const met = isRemoteJob
+    score += met ? 20 : 0
+    breakdown.push({
+      label: "Remote work",
+      met,
+      note: met ? "Position is remote" : "Position may not be remote",
+    })
+  } else if (locations.length) {
+    const locationMatch = locations.some(
+      (loc) =>
+        locationLower.includes(loc.toLowerCase()) ||
+        descLower.includes(loc.toLowerCase())
+    )
+    const met = locationMatch || isRemoteJob
+    score += met ? 20 : 10 // partial credit if no location listed
+    breakdown.push({
+      label: "Location",
+      met,
+      note: met
+        ? isRemoteJob ? "Remote position" : `Matches ${locations[0]}`
+        : `Looking for ${locations.slice(0, 2).join(" or ")}`,
+    })
+  } else {
+    score += 15 // no location preference = neutral
+    breakdown.push({
+      label: "Location",
+      met: true,
+      note: "No location preference set",
+    })
+  }
+
+  // ── Seniority match (20 pts) ──────────────────────────────────────────────
+  const seniorityTerms = ["director", "senior", "lead", "head of", "principal", "manager", "vp", "vice president"]
+  const targetSeniority = titles.some((t) =>
+    seniorityTerms.some((s) => t.toLowerCase().includes(s))
+  )
+  const jobHasSeniority = seniorityTerms.some((s) => titleLower.includes(s))
+  const seniorityMet = !targetSeniority || jobHasSeniority
+  score += seniorityMet ? 20 : 5
+  breakdown.push({
+    label: "Seniority level",
+    met: seniorityMet,
+    note: seniorityMet
+      ? "Seniority level aligns"
+      : "Job may be below target seniority",
+  })
+
+  // ── Salary (20 pts) ───────────────────────────────────────────────────────
+  let salaryValue: number | undefined
+  let salaryMet = true
+  let salaryNote = "Salary not listed"
+
+  if (job.salary) {
+    const nums = job.salary.match(/[\d,]+/g)?.map((n) => parseInt(n.replace(/,/g, ""))) ?? []
+    if (nums.length >= 2) salaryValue = Math.round((nums[0] + nums[1]) / 2)
+    else if (nums.length === 1) salaryValue = nums[0]
+
+    if (salaryValue) {
+      if (salaryMin > 0 && salaryValue < salaryMin) {
+        salaryMet = false
+        salaryNote = `Listed ~$${(salaryValue / 1000).toFixed(0)}k, floor is $${(salaryMin / 1000).toFixed(0)}k`
+      } else if (salaryMax > 0 && salaryValue > salaryMax * 1.3) {
+        salaryNote = `Listed ~$${(salaryValue / 1000).toFixed(0)}k — above your ceiling`
+        salaryMet = true // still apply — they may negotiate
+      } else {
+        salaryNote = `Listed ~$${(salaryValue / 1000).toFixed(0)}k`
+        salaryMet = true
+      }
+    }
+  } else {
+    salaryNote = "Salary not listed — worth asking"
+  }
+  score += salaryMet ? 20 : 5
+  breakdown.push({ label: "Compensation", met: salaryMet, note: salaryNote })
+
+  // ── Detect work model ─────────────────────────────────────────────────────
+  let workModel: "Remote" | "Hybrid" | "On-site" = "On-site"
+  if (isRemoteJob) workModel = "Remote"
+  else if (descLower.includes("hybrid") || locationLower.includes("hybrid")) workModel = "Hybrid"
+
+  const matchId = job.sourceId
   const match: MatchDoc = {
     userId: USER_ID,
     matchId,
     company: job.company,
     role: job.title,
     location: job.location,
-    workModel: object.workModel,
-    salary: object.salaryEstimate ?? job.salary ?? "Not listed",
-    score: object.score,
+    workModel,
+    salary: job.salary ?? "Not listed",
+    score,
     status: "New",
-    postedAgo,
-    breakdown: object.breakdown,
+    postedAgo: formatPostedAgo(job.postedAt),
+    breakdown,
     coverLetter: "",
     jobUrl: job.url,
     jobReqContent: job.description.slice(0, 3000),
     updatedAt: new Date(),
   }
 
-  return { match, score: object.score, salaryValue: object.salaryValue }
+  return { match, score, salaryValue }
 }
 
 // ---------------------------------------------------------------------------
-// Generate cover letter for a matched job
+// Generate cover letter — one LLM call per match
 // ---------------------------------------------------------------------------
 
 async function generateCoverLetter(
@@ -245,25 +304,24 @@ async function generateCoverLetter(
   resumeText: string,
   userName: string
 ): Promise<string> {
-  await new Promise((r) => setTimeout(r, 500))
   const { text } = await generateText({
-    model: "openai/gpt-4.1-mini",
+    model: "openai/gpt-4.1-nano",
     system: `You write concise, compelling cover letters. Three short paragraphs maximum. 
-No fluff. No "I am writing to express my interest." Start strong with a specific hook. 
-Return only the letter text — no subject line, no "Dear Hiring Manager" unless it fits naturally.`,
+No fluff. No "I am writing to express my interest." Start strong with a specific hook.
+Return only the letter text, no subject line.`,
     prompt: `Write a cover letter for ${userName} applying to the ${match.role} role at ${match.company}.
 
-Job description summary:
+Job description:
 ${(match.jobReqContent ?? "").slice(0, 800)}
 
-Candidate résumé summary:
+Candidate résumé:
 ${resumeText.slice(0, 800)}`,
   })
   return text
 }
 
 // ---------------------------------------------------------------------------
-// Record last run timestamp on the scraper agent config
+// Helpers
 // ---------------------------------------------------------------------------
 
 async function recordLastRun(db: Awaited<ReturnType<typeof getDb>>) {
