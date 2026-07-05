@@ -103,7 +103,7 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
       </div>
 
       <Card className="overflow-hidden py-0">
-        <div className="hidden grid-cols-[1.6fr_1fr_0.9fr_0.7fr_auto] gap-4 border-b border-border bg-secondary/30 px-5 py-3 text-xs font-medium text-muted-foreground md:grid">
+        <div className="hidden grid-cols-[1.6fr_0.9fr_1.2fr_0.6fr_auto] gap-4 border-b border-border bg-secondary/30 px-5 py-3 text-xs font-medium text-muted-foreground md:grid">
           <span>Role</span>
           <span>Location</span>
           <span>Compensation</span>
@@ -117,7 +117,7 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
               <button
                 type="button"
                 onClick={() => setSelected(match)}
-                className="grid w-full grid-cols-1 gap-3 px-5 py-4 text-left transition-colors hover:bg-accent/30 md:grid-cols-[1.6fr_1fr_0.9fr_0.7fr_auto] md:items-center md:gap-4"
+                className="grid w-full grid-cols-1 gap-3 px-5 py-4 text-left transition-colors hover:bg-accent/30 md:grid-cols-[1.6fr_0.9fr_1.2fr_0.6fr_auto] md:items-center md:gap-4"
               >
                 <div className="flex items-center gap-3">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-xs font-semibold text-secondary-foreground">
@@ -278,12 +278,12 @@ function MatchDetail({
         </div>
 
         <Separator className="my-4" />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {match.jobUrl ? (
             <Button asChild>
               <a href={match.jobUrl} target="_blank" rel="noopener noreferrer">
                 <ExternalLink data-icon="inline-start" />
-                Apply for this role
+                Find &amp; apply on LinkedIn
               </a>
             </Button>
           ) : (
@@ -292,6 +292,7 @@ function MatchDetail({
               No job link available
             </Button>
           )}
+          <p className="text-xs text-muted-foreground">Opens a filtered LinkedIn search for this role at {match.company}. Direct job links will be populated by the scraper agent.</p>
         </div>
       </Card>
 
