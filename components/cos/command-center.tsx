@@ -34,10 +34,10 @@ const today = new Date().toLocaleDateString('en-US', {
   day: 'numeric',
 })
 
-export function CommandCenter({ onNavigate, profileName, initialMatches = [] }: { onNavigate: (v: ViewKey) => void; profileName?: string; initialMatches?: MatchDoc[] }) {
+export function CommandCenter({ onNavigate, onNavigateToMatch, profileName, initialMatches = [] }: { onNavigate: (v: ViewKey) => void; onNavigateToMatch?: (matchId: string) => void; profileName?: string; initialMatches?: MatchDoc[] }) {
   return (
     <div className="flex flex-col gap-6">
-      <DailyDigest onNavigate={onNavigate} profileName={profileName} initialMatches={initialMatches} />
+      <DailyDigest onNavigate={onNavigate} onNavigateToMatch={onNavigateToMatch} profileName={profileName} initialMatches={initialMatches} />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -93,7 +93,7 @@ export function CommandCenter({ onNavigate, profileName, initialMatches = [] }: 
   )
 }
 
-function DailyDigest({ onNavigate, profileName, initialMatches }: { onNavigate: (v: ViewKey) => void; profileName?: string; initialMatches: MatchDoc[] }) {
+function DailyDigest({ onNavigate, onNavigateToMatch, profileName, initialMatches }: { onNavigate: (v: ViewKey) => void; onNavigateToMatch?: (matchId: string) => void; profileName?: string; initialMatches: MatchDoc[] }) {
   const [regenerating, setRegenerating] = useState(false)
   const [matches, setMatches] = useState<MatchDoc[]>(initialMatches)
 
@@ -161,7 +161,7 @@ function DailyDigest({ onNavigate, profileName, initialMatches }: { onNavigate: 
                 </div>
                 <div className="flex items-center gap-2">
                   <MatchScore score={match.score} />
-                  <Button size="sm" variant="ghost" onClick={() => onNavigate('matches')}>
+                  <Button size="sm" variant="ghost" onClick={() => onNavigateToMatch ? onNavigateToMatch(match.matchId) : onNavigate('matches')}>
                     View Details
                     <ChevronRight data-icon="inline-end" />
                   </Button>

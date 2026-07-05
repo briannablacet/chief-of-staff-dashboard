@@ -21,8 +21,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Input } from "@/components/ui/input"
-import { updateMatchStatus, regenerateMatches, saveJobUrl, type MatchDoc } from "@/lib/actions"
+import { updateMatchStatus, regenerateMatches, type MatchDoc } from "@/lib/actions"
 import { cn } from "@/lib/utils"
 
 const statusStyles: Record<MatchDoc["status"], string> = {
@@ -33,11 +32,15 @@ const statusStyles: Record<MatchDoc["status"], string> = {
 
 interface MatchesProps {
   initialMatches: MatchDoc[]
+  initialSelectedMatchId?: string
+  onMatchSelected?: () => void
 }
 
-export function Matches({ initialMatches }: MatchesProps) {
+export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelected }: MatchesProps) {
   const [matches, setMatches] = useState<MatchDoc[]>(initialMatches)
-  const [selected, setSelected] = useState<MatchDoc | null>(null)
+  const [selected, setSelected] = useState<MatchDoc | null>(
+    initialSelectedMatchId ? (initialMatches.find((m) => m.matchId === initialSelectedMatchId) ?? null) : null
+  )
   const [regenerating, setRegenerating] = useState(false)
 
   const handleStatusChange = (matchId: string, status: MatchDoc["status"]) => {
@@ -180,8 +183,6 @@ function MatchDetail({
 }) {
   const [copied, setCopied] = useState(false)
   const [isPending, startTransition] = useTransition()
-  const [jobUrl, setJobUrl] = useState(match.jobUrl ?? "")
-  const [savingUrl, setSavingUrl] = useState(false)
 
   const copyLetter = async () => {
     try {
@@ -276,46 +277,33 @@ function MatchDetail({
           </span>
         </div>
 
-        {/* Job URL row */}
         <Separator className="my-4" />
         <div className="flex items-center gap-2">
-          <Input
-            placeholder="Paste job listing URL to enable Apply button..."
-            value={jobUrl}
-            onChange={(e) => setJobUrl(e.target.value)}
-            className="flex-1 text-sm"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={savingUrl || jobUrl === (match.jobUrl ?? "")}
-            onClick={async () => {
-              setSavingUrl(true)
-              try {
-                await saveJobUrl(match.matchId, jobUrl)
-                toast.success("Job link saved")
-              } catch {
-                toast.error("Failed to save link")
-              } finally {
-                setSavingUrl(false)
-              }
-            }}
-          >
-            {savingUrl ? "Saving..." : "Save URL"}
-          </Button>
-          <Button asChild disabled={!jobUrl}>
-            <a
-              href={jobUrl || "#"}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => { if (!jobUrl) e.preventDefault() }}
-            >
+          {match.jobUrl ? (
+            <Button asChild>
+              <a href={match.jobUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink data-icon="inline-start" />
+                Apply for this role
+              </a>
+            </Button>
+          ) : (
+            <Button variant="outline" disabled>
               <ExternalLink data-icon="inline-start" />
-              Apply for this role
-            </a>
-          </Button>
+              No job link available
+            </Button>
+          )}
         </div>
       </Card>
+
+      {/* Job req content */}
+      {match.jobReqContent && (
+        <Card className="p-6">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">Job Description</h3>
+          <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+            {match.jobReqContent}
+          </p>
+        </Card>
+      )}
 
       {/* Two-column content */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

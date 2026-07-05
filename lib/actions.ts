@@ -44,6 +44,7 @@ export type MatchDoc = {
   breakdown: { label: string; met: boolean; note: string }[]
   coverLetter: string
   jobUrl?: string
+  jobReqContent?: string
   updatedAt: Date
 }
 
@@ -242,6 +243,8 @@ async function seedMatchesFromDirectives(db: Awaited<ReturnType<typeof getDb>>) 
             { label: "Seniority", met: score >= 88, note: score >= 88 ? "Strong fit" : "Stretch role" },
           ],
           coverLetter: `Dear ${company} Hiring Team,\n\nI've spent my career building products that make a real difference — and the ${role_label(title, suffix)} role at ${company} is exactly the kind of opportunity I've been targeting.\n\nI bring deep experience in ${suffix.toLowerCase()} product work, and I'd love to bring that to ${company}'s team.\n\nBest,\n${name}`,
+          jobUrl: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${title} ${company}`)}`,
+          jobReqContent: `${company} is looking for a ${title}, ${suffix} to join our growing team.\n\nAbout the role:\nAs a ${title} on the ${suffix} team, you will define and drive the product strategy for a critical part of our business. You'll work closely with engineering, design, and data to ship high-impact features.\n\nResponsibilities:\n• Define the product vision and roadmap for the ${suffix} area\n• Partner with engineering and design to deliver high-quality experiences\n• Use data and customer research to prioritize the highest-impact work\n• Communicate strategy and progress to leadership and stakeholders\n• Drive cross-functional alignment across product, eng, and go-to-market teams\n\nRequirements:\n• ${score >= 90 ? "7+" : "5+"} years of product management experience\n• Strong analytical and communication skills\n• Experience working on ${suffix.toLowerCase()} products at scale\n• ${wm === "Remote" ? "Comfortable working async in a distributed team" : `Based in or willing to relocate to ${location}`}\n\nCompensation: $${salaryLow}k – $${salaryHigh}k base + equity + benefits`,
           updatedAt: new Date(),
         }
       })

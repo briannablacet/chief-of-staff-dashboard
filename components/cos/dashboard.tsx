@@ -27,9 +27,16 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
   const [view, setView] = useState<ViewKey>("command")
   const [mobileNav, setMobileNav] = useState(false)
   const [directivesTab, setDirectivesTab] = useState<string | undefined>(undefined)
+  const [selectedMatchId, setSelectedMatchId] = useState<string | undefined>(undefined)
 
   const navigate = (v: ViewKey) => {
     setView(v)
+    setMobileNav(false)
+  }
+
+  const navigateToMatch = (matchId: string) => {
+    setSelectedMatchId(matchId)
+    setView("matches")
     setMobileNav(false)
   }
 
@@ -102,7 +109,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
-          {view === "command" && <CommandCenter onNavigate={navigate} profileName={initialDirectives?.name} initialMatches={initialMatches} />}
+          {view === "command" && <CommandCenter onNavigate={navigate} onNavigateToMatch={navigateToMatch} profileName={initialDirectives?.name} initialMatches={initialMatches} />}
           {view === "directives" && (
             <Directives
               initialDirectives={initialDirectives}
@@ -110,7 +117,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
               defaultTab={directivesTab}
             />
           )}
-          {view === "matches" && <Matches initialMatches={initialMatches} />}
+          {view === "matches" && <Matches initialMatches={initialMatches} initialSelectedMatchId={selectedMatchId} onMatchSelected={() => setSelectedMatchId(undefined)} />}
         </main>
       </div>
     </div>
