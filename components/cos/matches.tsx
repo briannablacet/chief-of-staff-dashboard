@@ -197,7 +197,7 @@ function MatchDetail({
       document.execCommand('defaultParagraphSeparator', false, 'p')
       editorRef.current.innerHTML = coverLetter
         .split(/\n\n+/)
-        .map((p) => `<p>${p.replace(/\n/g, "<br>") || "<br>"}</p>`)
+        .map((p) => `<p style="margin:0 0 1.75em 0;line-height:1.7">${p.replace(/\n/g, "<br>") || "<br>"}</p>`)
         .join("")
     }
   }, [editingLetter]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -261,8 +261,8 @@ function MatchDetail({
             className={[
               "min-h-[520px] w-full rounded-md border border-border bg-background px-6 py-6",
               "text-sm text-foreground outline-none focus:ring-2 focus:ring-ring",
-              "[&_p]:leading-7 [&_p+p]:mt-7 [&_p]:mb-0",
-              "[&_div]:leading-7 [&_div+div]:mt-7 [&_div]:mb-0",
+              "[&_p]:leading-[1.7] [&_p]:mb-[1.75em] [&_p:last-child]:mb-0",
+              "[&_div]:leading-[1.7] [&_div]:mb-[1.75em] [&_div:last-child]:mb-0",
               "empty:before:text-muted-foreground empty:before:content-['Your_cover_letter_will_appear_here...']",
             ].join(" ")}
           />
