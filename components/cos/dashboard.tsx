@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Menu, Bell, Search } from "lucide-react"
 import { AppSidebar, type ViewKey } from "@/components/cos/app-sidebar"
 import { CommandCenter } from "@/components/cos/command-center"
-import { Directives } from "@/components/cos/directives"
+import { Directives, AgentsTab } from "@/components/cos/directives"
 import { Matches } from "@/components/cos/matches"
 import { ThoughtLeadership } from "@/components/cos/thought-leadership"
 import { Resumes } from "@/components/cos/resumes"
@@ -132,13 +132,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
             } initialCoverLetters={initialCoverLetters} />}
           {view === "thought-leadership" && <ThoughtLeadership targetTitles={initialDirectives?.titles} targetCompanies={initialDirectives?.dreamCompanies} />}
           {view === "resumes" && <Resumes initialDirectives={initialDirectives} />}
-          {view === "agents" && (
-            <Directives
-              initialDirectives={initialDirectives}
-              initialAgentConfigs={initialAgentConfigs}
-              defaultTab="agents"
-            />
-          )}
+          {view === "agents" && <AgentsTab initialAgentConfigs={initialAgentConfigs} />}
         </main>
       </div>
     </div>
