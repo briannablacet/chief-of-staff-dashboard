@@ -204,11 +204,12 @@ async function seedMatchesFromDirectives(db: Awaited<ReturnType<typeof getDb>>) 
     : ["Linear", "Vercel", "Notion"]
 
   const location = directives?.locations?.[0] ?? "Remote (US)"
-  // salary is stored as [low, high] array of $k values (e.g. [190, 270])
-  const salaryArr = Array.isArray(directives?.salary) ? directives.salary as number[] : null
-  const salaryFloor = salaryArr?.[0] ?? 190
+  // salary is stored as salaryMin/salaryMax fields
+  const salaryFloor = directives?.salaryMin ?? 190
   const remoteOnly = directives?.remoteOnly ?? false
-  const name = directives?.name ?? "there"
+  const name = directives?.name || "there"
+  const headline = directives?.headline ?? ""
+  const defaultCoverLetter = directives?.defaultCoverLetter ?? ""
 
   const workModels: MatchDoc["workModel"][] = remoteOnly
     ? ["Remote"]
@@ -251,7 +252,7 @@ async function seedMatchesFromDirectives(db: Awaited<ReturnType<typeof getDb>>) 
             { label: "Anti-List", met: true, note: "No dealbreakers triggered" },
             { label: "Seniority", met: score >= 88, note: score >= 88 ? "Strong fit" : "Stretch role" },
           ],
-          coverLetter: `Dear ${company} Hiring Team,\n\nI've spent my career building products that make a real difference — and the ${role_label(title, suffix)} role at ${company} is exactly the kind of opportunity I've been targeting.\n\nI bring deep experience in ${suffix.toLowerCase()} product work, and I'd love to bring that to ${company}'s team.\n\nBest,\n${name}`,
+          coverLetter: buildCoverLetter({ defaultCoverLetter, name, headline, company, title, suffix }),
           jobUrl: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(title)}&company=${encodeURIComponent(company)}&f_TPR=r604800`,
           jobReqContent: `${company} is looking for a ${title}, ${suffix} to join our growing team.\n\nAbout the role:\nAs a ${title} on the ${suffix} team, you will define and drive the product strategy for a critical part of our business. You'll work closely with engineering, design, and data to ship high-impact features.\n\nResponsibilities:\n• Define the product vision and roadmap for the ${suffix} area\n• Partner with engineering and design to deliver high-quality experiences\n• Use data and customer research to prioritize the highest-impact work\n• Communicate strategy and progress to leadership and stakeholders\n• Drive cross-functional alignment across product, eng, and go-to-market teams\n\nRequirements:\n• ${score >= 90 ? "7+" : "5+"} years of product management experience\n• Strong analytical and communication skills\n• Experience working on ${suffix.toLowerCase()} products at scale\n• ${wm === "Remote" ? "Comfortable working async in a distributed team" : `Based in or willing to relocate to ${location}`}\n\nCompensation: $${salaryLow}k – $${salaryHigh}k base + equity + benefits`,
           updatedAt: new Date(),
@@ -262,6 +263,45 @@ async function seedMatchesFromDirectives(db: Awaited<ReturnType<typeof getDb>>) 
   if (seeds.length > 0) {
     await db.collection<MatchDoc>("matches").insertMany(seeds)
   }
+}
+
+function buildCoverLetter({
+  defaultCoverLetter,
+  name,
+  headline,
+  company,
+  title,
+  suffix,
+}: {
+  defaultCoverLetter: string
+  name: string
+  headline: string
+  company: string
+  title: string
+  suffix: string
+}): string {
+  const role = `${title}, ${suffix}`
+
+  // If the user has saved a default cover letter, use it as the base and
+  // substitute common placeholders so each letter is tailored to the role.
+  if (defaultCoverLetter.trim()) {
+    return defaultCoverLetter
+      .replace(/\[Company\]/gi, company)
+      .replace(/\[Role\]/gi, role)
+      .replace(/\[Title\]/gi, title)
+      .replace(/\[Name\]/gi, name)
+      .replace(/\[Your Name\]/gi, name)
+      .replace(/\[Headline\]/gi, headline)
+  }
+
+  // Fallback template when no default has been saved yet.
+  return [
+    `Dear ${company} Hiring Team,`,
+    `I am excited to apply for the ${role} role at ${company}. Throughout my career${headline ? ` as ${headline}` : ""}, I have built products that move the needle on metrics that matter — and I believe ${company} is exactly the kind of company where that work can have outsized impact.`,
+    `The ${suffix} area is one I know well. I thrive at the intersection of strategy and execution: defining the roadmap, aligning stakeholders, and working closely with engineering and design to ship with quality and speed.`,
+    `I would welcome the chance to talk about how my background fits what you are building. Thank you for your time and consideration.`,
+    `Best,\n${name}`,
+  ].join("\n\n")
 }
 
 function role_label(title: string, suffix: string) {
