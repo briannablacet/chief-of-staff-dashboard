@@ -1,55 +1,32 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { Target, Ban, FileText, Building2, MapPin, Link2, Plus, X, UploadCloud, User } from "lucide-react"
 import { toast } from "sonner"
-import {
-  Target,
-  Ban,
-  Building2,
-  FileText,
-  Link2,
-  MapPin,
-  Plus,
-  X,
-  UploadCloud,
-  Briefcase,
-  User,
-} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { saveDirectives } from "@/lib/actions"
+import type { DirectivesDoc } from "@/lib/actions"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  Field,
-  FieldGroup,
-  FieldLabel,
-  FieldDescription,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Slider } from "@/components/ui/slider"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Slider } from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
-import { cn } from "@/lib/utils"
-import { saveDirectives, type DirectivesDoc } from "@/lib/actions"
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 
-interface DirectivesProps {
-  initialDirectives: DirectivesDoc | null
-  defaultTab?: string
-}
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
-// Shared state shape passed to each tab
 interface DirectivesState {
   name: string
   headline: string
   titles: string
   locations: string
   salary: number[]
+  remoteOnly: boolean
   dreamCompanies: string[]
   dealbreakers: string[]
   resumeText: string
@@ -58,19 +35,28 @@ interface DirectivesState {
   defaultCoverLetter: string
 }
 
+interface DirectivesProps {
+  initialDirectives: DirectivesDoc | null
+  defaultTab?: string
+}
+
+// ---------------------------------------------------------------------------
+// Root component
+// ---------------------------------------------------------------------------
+
 export function Directives({ initialDirectives, defaultTab }: DirectivesProps) {
   const d = initialDirectives
   const [activeTab, setActiveTab] = useState(defaultTab ?? "targets")
 
-  // All directives state lives here so every tab save writes the full document
   const [state, setState] = useState<DirectivesState>({
     name: d?.name ?? "",
     headline: d?.headline ?? "",
-    titles: d?.titles.join(", ") ?? "Senior Product Manager, Group PM, Principal PM",
-    locations: d?.locations.join(", ") ?? "Remote (US), New York, San Francisco",
+    titles: d?.titles?.join(", ") ?? "Senior Product Manager, Group PM, Principal PM",
+    locations: d?.locations?.join(", ") ?? "Remote (US), New York, San Francisco",
     salary: [d?.salaryMin ?? 190, d?.salaryMax ?? 270],
-    dreamCompanies: d?.dreamCompanies ?? ["Linear", "Vercel", "Stripe", "Notion", "Figma"],
-    dealbreakers: d?.dealbreakers ?? ["Exclude Fintech", "No strict RTO", "No pre-seed startups"],
+    remoteOnly: d?.remoteOnly ?? false,
+    dreamCompanies: d?.dreamCompanies ?? [],
+    dealbreakers: d?.dealbreakers ?? [],
     resumeText: d?.resumeText ?? "",
     resumeFileName: d?.resumeFileName ?? "",
     linkedinUrl: d?.linkedinUrl ?? "",
@@ -80,14 +66,14 @@ export function Directives({ initialDirectives, defaultTab }: DirectivesProps) {
   const set = <K extends keyof DirectivesState>(key: K, value: DirectivesState[K]) =>
     setState((prev) => ({ ...prev, [key]: value }))
 
-  const buildPayload = (): Omit<DirectivesDoc, "_id" | "userId" | "updatedAt"> => ({
+  const buildPayload = () => ({
     name: state.name,
     headline: state.headline,
-    titles: state.titles.split(",").map((s) => s.trim()).filter(Boolean),
-    locations: state.locations.split(",").map((s) => s.trim()).filter(Boolean),
+    titles: state.titles.split(",").map((t) => t.trim()).filter(Boolean),
+    locations: state.locations.split(",").map((l) => l.trim()).filter(Boolean),
     salaryMin: state.salary[0],
     salaryMax: state.salary[1],
-    remoteOnly: false,
+    remoteOnly: state.remoteOnly,
     dreamCompanies: state.dreamCompanies,
     dealbreakers: state.dealbreakers,
     resumeText: state.resumeText,
@@ -99,11 +85,9 @@ export function Directives({ initialDirectives, defaultTab }: DirectivesProps) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">
-          Directives &amp; Criteria
-        </h1>
+        <h1 className="text-xl font-semibold text-foreground">Directives &amp; Criteria</h1>
         <p className="text-sm text-muted-foreground">
-          Tell your Chief of Staff exactly what to look for and what to avoid.
+          Configure your job search criteria, target companies, and profile for your agents.
         </p>
       </div>
 
@@ -115,7 +99,7 @@ export function Directives({ initialDirectives, defaultTab }: DirectivesProps) {
           </TabsTrigger>
           <TabsTrigger value="dealbreakers">
             <Ban data-icon="inline-start" />
-            {"Settings"}
+            Settings
           </TabsTrigger>
           <TabsTrigger value="resume">
             <FileText data-icon="inline-start" />
@@ -160,7 +144,7 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
         await saveDirectives(buildPayload())
         toast.success("Job targets saved")
       } catch {
-        toast.error("Failed to save — check your MongoDB connection")
+        toast.error("Failed to save")
       }
     })
   }
@@ -169,19 +153,13 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Job Targets</CardTitle>
-        <CardDescription>
-          Define the roles worth your Chief of Staff&apos;s attention.
-        </CardDescription>
+        <CardDescription>Define the roles worth your Chief of Staff&apos;s attention.</CardDescription>
       </CardHeader>
       <CardContent>
         <FieldGroup>
           <Field>
             <FieldLabel htmlFor="titles">Target job titles</FieldLabel>
-            <Input
-              id="titles"
-              value={state.titles}
-              onChange={(e) => set("titles", e.target.value)}
-            />
+            <Input id="titles" value={state.titles} onChange={(e) => set("titles", e.target.value)} />
             <FieldDescription>Separate multiple titles with commas.</FieldDescription>
           </Field>
 
@@ -206,9 +184,7 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
                 <span>$400k</span>
               </div>
             </div>
-            <FieldDescription>
-              Roles below your floor are auto-rejected by the Resume Scorer Agent.
-            </FieldDescription>
+            <FieldDescription>Roles below your floor are auto-rejected by the Resume Scorer Agent.</FieldDescription>
           </Field>
 
           <Separator />
@@ -217,12 +193,7 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
             <FieldLabel htmlFor="location">Location preferences</FieldLabel>
             <div className="relative">
               <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="location"
-                className="pl-9"
-                value={state.locations}
-                onChange={(e) => set("locations", e.target.value)}
-              />
+              <Input id="location" className="pl-9" value={state.locations} onChange={(e) => set("locations", e.target.value)} />
             </div>
             <FieldDescription>Add cities or &quot;Remote&quot; regions.</FieldDescription>
           </Field>
@@ -231,15 +202,11 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
             <Button onClick={save} disabled={isPending}>
               {isPending ? "Saving..." : "Save targets"}
             </Button>
-            <Button
-              variant="ghost"
-              className="text-muted-foreground"
-              onClick={() => {
-                set("titles", "Senior Product Manager, Group PM, Principal PM")
-                set("locations", "Remote (US), New York, San Francisco")
-                set("salary", [190, 270])
-              }}
-            >
+            <Button variant="ghost" className="text-muted-foreground" onClick={() => {
+              set("titles", "Senior Product Manager, Group PM, Principal PM")
+              set("locations", "Remote (US), New York, San Francisco")
+              set("salary", [190, 270])
+            }}>
               Reset
             </Button>
           </Field>
@@ -250,7 +217,7 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
 }
 
 // ---------------------------------------------------------------------------
-// Dealbreakers tab
+// Settings tab (companies + dealbreakers)
 // ---------------------------------------------------------------------------
 
 function DealbreakersTab({ state, set, buildPayload }: TabProps) {
@@ -260,9 +227,9 @@ function DealbreakersTab({ state, set, buildPayload }: TabProps) {
     startTransition(async () => {
       try {
         await saveDirectives(buildPayload())
-        toast.success("Dealbreakers saved")
+        toast.success("Settings saved")
       } catch {
-        toast.error("Failed to save — check your MongoDB connection")
+        toast.error("Failed to save")
       }
     })
   }
@@ -278,20 +245,12 @@ function DealbreakersTab({ state, set, buildPayload }: TabProps) {
               </span>
               <div>
                 <CardTitle className="text-base">Dream Companies</CardTitle>
-                <CardDescription>
-                  Your Networking Agent prioritizes these.
-                </CardDescription>
+                <CardDescription>Your Networking Agent prioritizes these.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <TagInput
-              tags={state.dreamCompanies}
-              onChange={(tags) => set("dreamCompanies", tags)}
-              placeholder="Add a company..."
-              tone="primary"
-              icon={Briefcase}
-            />
+            <TagInput tags={state.dreamCompanies} onChange={(tags) => set("dreamCompanies", tags)} placeholder="Add a company..." tone="primary" icon={Building2} />
           </CardContent>
         </Card>
 
@@ -303,20 +262,12 @@ function DealbreakersTab({ state, set, buildPayload }: TabProps) {
               </span>
               <div>
                 <CardTitle className="text-base">Anti-List / Dealbreakers</CardTitle>
-                <CardDescription>
-                  Any match tripping these is auto-rejected.
-                </CardDescription>
+                <CardDescription>Any match tripping these is auto-rejected.</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <TagInput
-              tags={state.dealbreakers}
-              onChange={(tags) => set("dealbreakers", tags)}
-              placeholder="Add a dealbreaker..."
-              tone="destructive"
-              icon={X}
-            />
+            <TagInput tags={state.dealbreakers} onChange={(tags) => set("dealbreakers", tags)} placeholder="Add a dealbreaker..." tone="destructive" icon={X} />
           </CardContent>
         </Card>
       </div>
@@ -343,14 +294,13 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
         await saveDirectives(buildPayload())
         toast.success("Profile saved")
       } catch {
-        toast.error("Failed to save — check your MongoDB connection")
+        toast.error("Failed to save")
       }
     })
   }
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Personal info */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -359,9 +309,7 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
             </span>
             <div>
               <CardTitle className="text-base">Your Profile</CardTitle>
-              <CardDescription>
-                Used in cover letters and outreach messages generated by your agents.
-              </CardDescription>
+              <CardDescription>Used in cover letters and outreach messages generated by your agents.</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -369,80 +317,43 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="name">Full name</FieldLabel>
-              <Input
-                id="name"
-                placeholder="e.g. Alex Rivera"
-                value={state.name}
-                onChange={(e) => set("name", e.target.value)}
-              />
+              <Input id="name" placeholder="e.g. Brianna Blacet" value={state.name} onChange={(e) => set("name", e.target.value)} />
             </Field>
             <Field>
               <FieldLabel htmlFor="headline">Professional headline</FieldLabel>
-              <Input
-                id="headline"
-                placeholder="e.g. Senior Product Manager · 8 years · B2B SaaS"
-                value={state.headline}
-                onChange={(e) => set("headline", e.target.value)}
-              />
-              <FieldDescription>
-                Your agents use this as a one-line summary when reaching out to hiring managers.
-              </FieldDescription>
+              <Input id="headline" placeholder="e.g. Senior Product Manager · 8 years · B2B SaaS" value={state.headline} onChange={(e) => set("headline", e.target.value)} />
+              <FieldDescription>Your agents use this as a one-line summary when reaching out to hiring managers.</FieldDescription>
             </Field>
             <Field>
               <FieldLabel htmlFor="linkedin">LinkedIn profile URL</FieldLabel>
               <div className="relative">
                 <Link2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="linkedin"
-                  className="pl-9"
-                  placeholder="linkedin.com/in/yourprofile"
-                  value={state.linkedinUrl}
-                  onChange={(e) => set("linkedinUrl", e.target.value)}
-                />
+                <Input id="linkedin" className="pl-9" placeholder="linkedin.com/in/yourprofile" value={state.linkedinUrl} onChange={(e) => set("linkedinUrl", e.target.value)} />
               </div>
             </Field>
           </FieldGroup>
         </CardContent>
       </Card>
 
-      {/* Resume upload */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Master Resume</CardTitle>
-          <CardDescription>
-            Your resume trains the Resume Scorer Agent&apos;s matching logic.
-          </CardDescription>
+          <CardDescription>Your resume trains the Resume Scorer Agent&apos;s matching logic.</CardDescription>
         </CardHeader>
         <CardContent>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="resume-upload">Upload resume</FieldLabel>
-              <label
-                htmlFor="resume-upload"
-                className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-6 py-10 text-center transition-colors hover:border-primary/50 hover:bg-accent/30"
-              >
+              <label htmlFor="resume-upload" className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-6 py-10 text-center transition-colors hover:border-primary/50 hover:bg-accent/30">
                 <span className="flex size-12 items-center justify-center rounded-full bg-accent text-primary">
                   <UploadCloud className="size-6" />
                 </span>
-                <span className="text-sm font-medium text-foreground">
-                  Drag &amp; drop your resume, or click to browse
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  PDF or DOCX, up to 10MB
-                </span>
-                <input
-                  id="resume-upload"
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  className="sr-only"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0]
-                    if (f) {
-                      set("resumeFileName", f.name)
-                      toast.success("Resume ready to save", { description: f.name })
-                    }
-                  }}
-                />
+                <span className="text-sm font-medium text-foreground">Drag &amp; drop your resume, or click to browse</span>
+                <span className="text-xs text-muted-foreground">PDF or DOCX, up to 10MB</span>
+                <input id="resume-upload" type="file" accept=".pdf,.doc,.docx" className="sr-only" onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) { set("resumeFileName", f.name); toast.success("Resume ready to save", { description: f.name }) }
+                }} />
               </label>
               {state.resumeFileName && (
                 <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2.5">
@@ -450,13 +361,7 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
                     <FileText className="size-4 text-primary" />
                     {state.resumeFileName}
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground"
-                    aria-label="Remove resume"
-                    onClick={() => set("resumeFileName", "")}
-                  >
+                  <Button variant="ghost" size="icon" className="text-muted-foreground" aria-label="Remove resume" onClick={() => set("resumeFileName", "")}>
                     <X />
                   </Button>
                 </div>
@@ -466,7 +371,6 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
         </CardContent>
       </Card>
 
-      {/* Default cover letter */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -475,10 +379,7 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
             </span>
             <div>
               <CardTitle className="text-base">Default Cover Letter</CardTitle>
-              <CardDescription>
-                Your Ghostwriter Agent uses this as the base template, then tailors
-                each variation to the specific role, company, and hiring manager.
-              </CardDescription>
+              <CardDescription>Your Ghostwriter Agent uses this as the base template, then tailors each variation to the specific role, company, and hiring manager.</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -488,7 +389,7 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
               <FieldLabel htmlFor="cover-letter">Base template</FieldLabel>
               <Textarea
                 id="cover-letter"
-                placeholder={`Dear Hiring Manager,\n\nI'm excited to apply for the [Role] position at [Company]...\n\nWrite your base letter here. Your agents will substitute [Role], [Company], and [Hiring Manager] automatically and adjust the tone to match each job description.`}
+                placeholder={"Dear Hiring Manager,\n\nI'm excited to apply for the [Role] position at [Company]...\n\nWrite your base letter here. Your agents will substitute [Role], [Company], and [Hiring Manager] automatically."}
                 className="min-h-72 resize-y font-mono text-sm leading-relaxed"
                 value={state.defaultCoverLetter}
                 onChange={(e) => set("defaultCoverLetter", e.target.value)}
@@ -498,26 +399,17 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
                   Use <code className="rounded bg-accent px-1 py-0.5 text-xs">[Role]</code>,{" "}
                   <code className="rounded bg-accent px-1 py-0.5 text-xs">[Company]</code>, and{" "}
                   <code className="rounded bg-accent px-1 py-0.5 text-xs">[Hiring Manager]</code>{" "}
-                  as placeholders — your agents will fill them in.
+                  as placeholders.
                 </span>
-                <span className="ml-4 shrink-0 tabular-nums text-muted-foreground">
-                  {state.defaultCoverLetter.length} chars
-                </span>
+                <span className="ml-4 shrink-0 tabular-nums text-muted-foreground">{state.defaultCoverLetter.length} chars</span>
               </FieldDescription>
             </Field>
-
             <Field orientation="horizontal">
               <Button onClick={save} disabled={isPending}>
                 {isPending ? "Saving..." : "Save profile"}
               </Button>
               {state.defaultCoverLetter.length > 0 && (
-                <Button
-                  variant="ghost"
-                  className="text-muted-foreground"
-                  onClick={() => set("defaultCoverLetter", "")}
-                >
-                  Clear
-                </Button>
+                <Button variant="ghost" className="text-muted-foreground" onClick={() => set("defaultCoverLetter", "")}>Clear</Button>
               )}
             </Field>
           </FieldGroup>
@@ -531,13 +423,7 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
 // TagInput
 // ---------------------------------------------------------------------------
 
-function TagInput({
-  tags,
-  onChange,
-  placeholder,
-  tone,
-  icon: Icon,
-}: {
+function TagInput({ tags, onChange, placeholder, tone, icon: Icon }: {
   tags: string[]
   onChange: (tags: string[]) => void
   placeholder: string
@@ -548,10 +434,7 @@ function TagInput({
 
   const add = () => {
     const v = value.trim()
-    if (!v || tags.includes(v)) {
-      setValue("")
-      return
-    }
+    if (!v || tags.includes(v)) { setValue(""); return }
     onChange([...tags, v])
     setValue("")
   }
@@ -559,49 +442,23 @@ function TagInput({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex gap-2">
-        <Input
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.nativeEvent.isComposing) {
-              e.preventDefault()
-              add()
-            }
-          }}
-          placeholder={placeholder}
-        />
-        <Button
-          type="button"
-          size="icon"
-          variant={tone === "destructive" ? "outline" : "default"}
-          onClick={add}
-          aria-label="Add"
-        >
+        <Input value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); add() }
+        }} placeholder={placeholder} />
+        <Button type="button" size="icon" variant={tone === "destructive" ? "outline" : "default"} onClick={add} aria-label="Add">
           <Plus />
         </Button>
       </div>
       <div className="flex flex-wrap gap-2">
-        {tags.length === 0 && (
-          <p className="text-xs text-muted-foreground">Nothing added yet.</p>
-        )}
+        {tags.length === 0 && <p className="text-xs text-muted-foreground">Nothing added yet.</p>}
         {tags.map((tag) => (
-          <span
-            key={tag}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium",
-              tone === "destructive"
-                ? "border-destructive/30 bg-destructive/10 text-destructive"
-                : "border-primary/30 bg-primary/10 text-primary"
-            )}
-          >
+          <span key={tag} className={cn(
+            "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium",
+            tone === "destructive" ? "border-destructive/30 bg-destructive/10 text-destructive" : "border-primary/30 bg-primary/10 text-primary"
+          )}>
             <Icon className="size-3" />
             {tag}
-            <button
-              type="button"
-              onClick={() => onChange(tags.filter((t) => t !== tag))}
-              aria-label={`Remove ${tag}`}
-              className="ml-0.5 rounded-full opacity-60 transition-opacity hover:opacity-100"
-            >
+            <button type="button" onClick={() => onChange(tags.filter((t) => t !== tag))} aria-label={`Remove ${tag}`} className="ml-0.5 rounded-full opacity-60 transition-opacity hover:opacity-100">
               <X className="size-3" />
             </button>
           </span>
