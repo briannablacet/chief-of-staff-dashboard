@@ -208,21 +208,30 @@ export function Resumes({ initialDirectives }: ResumesProps) {
             {/* Upload zone */}
             <label
               htmlFor="resume-upload"
-              className="flex cursor-pointer items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-accent/30 px-4 py-4 text-sm transition-colors hover:border-primary/50 hover:bg-accent/50"
+              className="group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 px-6 py-8 text-sm transition-colors hover:border-primary/70 hover:bg-primary/10"
             >
               {parsing ? (
                 <>
-                  <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                  <span className="text-muted-foreground">Extracting text...</span>
+                  <Loader2 className="size-6 animate-spin text-primary" />
+                  <span className="font-medium text-foreground">Extracting text...</span>
+                  <span className="text-xs text-muted-foreground">This may take a moment</span>
                 </>
               ) : (
                 <>
-                  <UploadCloud className="size-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {editingResume.fileName
-                      ? <><span className="font-medium text-foreground">{editingResume.fileName}</span> — click to replace</>
-                      : "Upload résumé — PDF, DOCX, or TXT"}
-                  </span>
+                  <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 transition-colors group-hover:bg-primary/20">
+                    <UploadCloud className="size-6 text-primary" />
+                  </div>
+                  {editingResume.fileName ? (
+                    <>
+                      <span className="font-semibold text-foreground">{editingResume.fileName}</span>
+                      <span className="text-xs text-muted-foreground">Click to replace</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-foreground">Upload your résumé</span>
+                      <span className="text-xs text-muted-foreground">PDF, DOCX, or TXT — click to browse</span>
+                    </>
+                  )}
                 </>
               )}
               <input

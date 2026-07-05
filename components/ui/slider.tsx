@@ -1,30 +1,66 @@
-import { Slider as SliderPrimitive } from "@base-ui/react/slider"
+"use client"
 
+import { Slider as SliderPrimitive } from "@base-ui/react/slider"
 import { cn } from "@/lib/utils"
+
+interface SliderProps {
+  value?: number | readonly number[]
+  defaultValue?: number | readonly number[]
+  onValueChange?: (value: number | readonly number[]) => void
+  onValueCommitted?: (value: number | readonly number[]) => void
+  min?: number
+  max?: number
+  step?: number
+  largeStep?: number
+  disabled?: boolean
+  orientation?: "horizontal" | "vertical"
+  name?: string
+  className?: string
+  "aria-label"?: string
+  "aria-labelledby"?: string
+}
 
 function Slider({
   className,
-  defaultValue,
   value,
+  defaultValue,
+  onValueChange,
+  onValueCommitted,
   min = 0,
   max = 100,
+  step = 1,
   ...props
-}: SliderPrimitive.Root.Props) {
-  const _values = Array.isArray(value)
+}: SliderProps) {
+  const values = Array.isArray(value)
     ? value
-    : Array.isArray(defaultValue)
-      ? defaultValue
-      : [min, max]
+    : value !== undefined
+      ? [value]
+      : Array.isArray(defaultValue)
+        ? defaultValue
+        : defaultValue !== undefined
+          ? [defaultValue]
+          : [min, max]
 
   return (
     <SliderPrimitive.Root
       className={cn("data-horizontal:w-full data-vertical:h-full", className)}
       data-slot="slider"
-      defaultValue={defaultValue}
       value={value}
+      defaultValue={defaultValue}
       min={min}
       max={max}
+      step={step}
       thumbAlignment="edge"
+      onValueChange={
+        onValueChange
+          ? (v) => onValueChange(Array.isArray(v) ? v : [v])
+          : undefined
+      }
+      onValueCommitted={
+        onValueCommitted
+          ? (v) => onValueCommitted(Array.isArray(v) ? v : [v])
+          : undefined
+      }
       {...props}
     >
       <SliderPrimitive.Control className="relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col">
@@ -37,7 +73,7 @@ function Slider({
             className="bg-primary select-none data-horizontal:h-full data-vertical:w-full"
           />
         </SliderPrimitive.Track>
-        {Array.from({ length: _values.length }, (_, index) => (
+        {Array.from({ length: values.length }, (_, index) => (
           <SliderPrimitive.Thumb
             data-slot="slider-thumb"
             key={index}
