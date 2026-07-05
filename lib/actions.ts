@@ -23,6 +23,8 @@ export type DirectivesDoc = {
   resumeFileName: string
   linkedinUrl: string
   defaultCoverLetter: string
+  dailyMatchLimit: number
+  dailyCoverLetterLimit: number
   updatedAt: Date
 }
 
