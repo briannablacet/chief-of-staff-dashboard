@@ -11,6 +11,7 @@ import {
   MapPin,
   Wallet,
   Send,
+  RefreshCw,
 } from "lucide-react"
 import {
   Sheet,
@@ -25,7 +26,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { updateMatchStatus, type MatchDoc } from "@/lib/actions"
+import { updateMatchStatus, regenerateMatches, type MatchDoc } from "@/lib/actions"
 import { cn } from "@/lib/utils"
 
 const statusStyles: Record<MatchDoc["status"], string> = {
@@ -41,6 +42,7 @@ interface MatchesProps {
 export function Matches({ initialMatches }: MatchesProps) {
   const [matches, setMatches] = useState<MatchDoc[]>(initialMatches)
   const [selected, setSelected] = useState<MatchDoc | null>(null)
+  const [regenerating, setRegenerating] = useState(false)
 
   const handleStatusChange = (matchId: string, status: MatchDoc["status"]) => {
     setMatches((prev) =>
@@ -51,25 +53,43 @@ export function Matches({ initialMatches }: MatchesProps) {
     }
   }
 
+  const handleRegenerate = async () => {
+    setRegenerating(true)
+    try {
+      await regenerateMatches()
+      toast.success("Matches regenerated", {
+        description: "Re-scored against your latest target roles.",
+      })
+      window.location.reload()
+    } catch {
+      toast.error("Failed to regenerate matches")
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">
-            Matches &amp; Cover Letters
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Every role that cleared your filters. Click any match for the full
-            breakdown.
-          </p>
-        </div>
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Every role that cleared your filters. Click any match for the full breakdown.
+        </p>
+        <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-muted-foreground">
             {matches.length} matches
           </Badge>
           <Badge variant="outline" className="text-success">
             {matches.filter((m) => m.status === "Applied").length} applied
           </Badge>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={regenerating}
+            onClick={handleRegenerate}
+          >
+            <RefreshCw data-icon="inline-start" className={regenerating ? "animate-spin" : ""} />
+            {regenerating ? "Regenerating..." : "Regenerate Matches"}
+          </Button>
         </div>
       </div>
 

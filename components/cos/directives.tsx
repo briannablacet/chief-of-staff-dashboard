@@ -82,7 +82,6 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">Settings</h1>
         <p className="text-sm font-medium text-foreground/80">Configure your job search.</p>
         <p className="text-sm text-muted-foreground">
           Set up your profile, target roles, dream companies, and dealbreakers.
