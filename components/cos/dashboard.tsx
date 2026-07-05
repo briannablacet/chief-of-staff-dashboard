@@ -7,6 +7,7 @@ import { CommandCenter } from "@/components/cos/command-center"
 import { Directives } from "@/components/cos/directives"
 import { Matches } from "@/components/cos/matches"
 import { ThoughtLeadership } from "@/components/cos/thought-leadership"
+import { Resumes } from "@/components/cos/resumes"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import type { DirectivesDoc, AgentDoc, MatchDoc } from "@/lib/actions"
@@ -123,13 +124,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
           )}
           {view === "matches" && <Matches initialMatches={initialMatches} initialSelectedMatchId={selectedMatchId} onMatchSelected={() => setSelectedMatchId(undefined)} resumes={initialDirectives?.resumes ?? []} />}
           {view === "thought-leadership" && <ThoughtLeadership targetTitles={initialDirectives?.titles} targetCompanies={initialDirectives?.dreamCompanies} />}
-          {view === "resumes" && (
-            <Directives
-              initialDirectives={initialDirectives}
-              initialAgentConfigs={initialAgentConfigs}
-              defaultTab="resumes"
-            />
-          )}
+          {view === "resumes" && <Resumes initialDirectives={initialDirectives} />}
           {view === "agents" && (
             <Directives
               initialDirectives={initialDirectives}
