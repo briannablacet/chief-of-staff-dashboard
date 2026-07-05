@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Target, Ban, FileText, Building2, MapPin, Link2, Plus, X, UploadCloud, User, Terminal, Users } from "lucide-react"
+import { Target, Ban, FileText, Building2, MapPin, Link2, Plus, X, UploadCloud, User, Terminal } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { saveDirectives, saveAgentConfig } from "@/lib/actions"
@@ -100,7 +100,7 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
       <div className="flex flex-col gap-1">
         <p className="text-2xl font-semibold text-foreground">Configure your job search.</p>
         <p className="text-base text-muted-foreground">
-          Set up your profile, target roles, dream companies, and dealbreakers.
+          Set up your profile, target roles, dream companies, and dealbreakers. Configure agents in Agent Setup.
         </p>
       </div>
 
@@ -123,10 +123,6 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
             <Ban data-icon="inline-start" />
             Dealbreakers
           </TabsTrigger>
-          <TabsTrigger value="agents">
-            <Users data-icon="inline-start" />
-            Agents
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="resume">
@@ -141,9 +137,6 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
         </TabsContent>
         <TabsContent value="dealbreakers">
           <DealbreakersTab state={state} set={set} buildPayload={buildPayload} />
-        </TabsContent>
-        <TabsContent value="agents">
-          <AgentsTab initialAgentConfigs={initialAgentConfigs} />
         </TabsContent>
       </Tabs>
     </div>
