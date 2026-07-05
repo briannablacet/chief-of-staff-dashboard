@@ -241,9 +241,9 @@ function PostEditor({
         <p className="mb-2 text-xs font-medium text-foreground">LinkedIn post tips</p>
         <ul className="flex flex-col gap-1 text-xs text-muted-foreground">
           <li>Aim for 1,300 characters or fewer for maximum reach.</li>
-          <li>Line breaks matter \u2014 white space increases engagement.</li>
+          <li>Line breaks matter — white space increases engagement.</li>
           <li>End with a question to drive comments.</li>
-          <li>Post Tuesday\u2013Thursday between 8\u201310am for best visibility.</li>
+          <li>Post Tuesday–Thursday between 8–10am for best visibility.</li>
         </ul>
       </div>
     </div>
