@@ -210,7 +210,6 @@ function MatchDetail({
       setSavingLetter(false)
     }
   }
-  }
 
   const markApplied = () => {
     startTransition(async () => {
