@@ -103,7 +103,7 @@ export function Directives({ initialDirectives, defaultTab }: DirectivesProps) {
           Directives &amp; Criteria
         </h1>
         <p className="text-sm text-muted-foreground">
-          Tell your Chief of Staff exactly what to look for and what to avoid.
+          Configure your job search criteria, target companies, and profile for your agents.
         </p>
       </div>
 
