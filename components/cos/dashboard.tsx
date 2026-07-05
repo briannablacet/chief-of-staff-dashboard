@@ -6,6 +6,7 @@ import { AppSidebar, type ViewKey } from "@/components/cos/app-sidebar"
 import { CommandCenter } from "@/components/cos/command-center"
 import { Directives } from "@/components/cos/directives"
 import { Matches } from "@/components/cos/matches"
+import { ThoughtLeadership } from "@/components/cos/thought-leadership"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import type { DirectivesDoc, AgentDoc, MatchDoc } from "@/lib/actions"
@@ -15,6 +16,7 @@ const TITLES: Record<ViewKey, string> = {
   staff: "Staff Organization",
   directives: "Settings",
   matches: "Matches & Cover Letters",
+  "thought-leadership": "Thought Leadership",
 }
 
 interface DashboardProps {
@@ -120,6 +122,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
             />
           )}
           {view === "matches" && <Matches initialMatches={initialMatches} initialSelectedMatchId={selectedMatchId} onMatchSelected={() => setSelectedMatchId(undefined)} />}
+          {view === "thought-leadership" && <ThoughtLeadership targetTitles={initialDirectives?.titles} targetCompanies={initialDirectives?.dreamCompanies} />}
         </main>
       </div>
     </div>

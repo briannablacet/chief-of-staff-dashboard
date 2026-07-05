@@ -7,16 +7,18 @@ import {
   Inbox,
   Sparkles,
   Circle,
+  PenLine,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
-export type ViewKey = 'command' | 'staff' | 'directives' | 'matches'
+export type ViewKey = 'command' | 'staff' | 'directives' | 'matches' | 'thought-leadership'
 
 const NAV: { key: ViewKey; label: string; sub: string; icon: typeof Inbox }[] = [
   { key: 'directives', label: 'Settings', sub: 'Configuration', icon: SlidersHorizontal },
   { key: 'command', label: 'Command Center', sub: 'Daily digest', icon: LayoutDashboard },
   { key: 'matches', label: 'Matches & Cover Letters', sub: 'Output archive', icon: Inbox },
+  { key: 'thought-leadership', label: 'Thought Leadership', sub: 'LinkedIn post ideas', icon: PenLine },
 ]
 
 export function AppSidebar({
