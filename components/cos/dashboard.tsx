@@ -56,6 +56,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
           profileName={initialDirectives?.name}
           profileHeadline={initialDirectives?.headline}
           onProfileClick={goToProfile}
+          onNavigateToAgents={() => { setDirectivesTab("agents"); setView("directives") }}
         />
       </aside>
 
@@ -69,6 +70,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
             profileName={initialDirectives?.name}
             profileHeadline={initialDirectives?.headline}
             onProfileClick={goToProfile}
+            onNavigateToAgents={() => { setDirectivesTab("agents"); setView("directives"); setMobileNav(false) }}
           />
         </SheetContent>
       </Sheet>
