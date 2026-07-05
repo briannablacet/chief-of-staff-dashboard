@@ -21,7 +21,7 @@ export function Resumes({ initialDirectives }: ResumesProps) {
 
   const [resumes, setResumes] = useState<ResumeEntry[]>(() => {
     if (d?.resumes?.length) return d.resumes
-    if (d?.resumeText) return [{ id: "default", label: "My Resume", text: d.resumeText, fileName: d.resumeFileName ?? "", isDefault: true }]
+    if (d?.resumeText) return [{ id: "default", label: "My Résumé", text: d.resumeText, fileName: d.resumeFileName ?? "", isDefault: true }]
     return []
   })
 
@@ -43,9 +43,9 @@ export function Resumes({ initialDirectives }: ResumesProps) {
       if (!res.ok) throw new Error("Optimization failed")
       const { optimizedText } = await res.json()
       setResumes((prev) => prev.map((r) => r.id === id ? { ...r, text: optimizedText } : r))
-      toast.success("Resume optimized for ATS")
+      toast.success("Résumé optimized for ATS")
     } catch {
-      toast.error("Could not optimize resume")
+      toast.error("Could not optimize résumé")
     } finally {
       setOptimizing(null)
     }
@@ -64,7 +64,7 @@ export function Resumes({ initialDirectives }: ResumesProps) {
     try {
       const text = await parseResumeFile(file)
       setResumes((prev) => prev.map((r) => r.id === id ? { ...r, text, fileName: file.name } : r))
-      toast.success("Resume extracted", { description: file.name })
+      toast.success("Résumé extracted", { description: file.name })
     } catch (err) {
       toast.error("Could not read file", { description: err instanceof Error ? err.message : "Unknown error" })
     } finally {
@@ -81,9 +81,9 @@ export function Resumes({ initialDirectives }: ResumesProps) {
           resumeText: updated.find((r) => r.isDefault)?.text ?? d?.resumeText ?? "",
           resumeFileName: updated.find((r) => r.isDefault)?.fileName ?? d?.resumeFileName ?? "",
         } as DirectivesDoc)
-        toast.success("Resumes saved")
+        toast.success("Résumés saved")
       } catch {
-        toast.error("Failed to save resumes")
+        toast.error("Failed to save résumés")
       }
     })
   }
@@ -122,13 +122,13 @@ export function Resumes({ initialDirectives }: ResumesProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base">Your Resumes</CardTitle>
+              <CardTitle className="text-base">Your Résumés</CardTitle>
               <CardDescription>
-                Name each resume by the role type it targets. The default is used for new matches; you can choose a different one per application on the match detail page.
+                Name each résumé by the role type it targets. The default is used for new matches; you can choose a different one per application on the match detail page.
               </CardDescription>
             </div>
             <Button size="sm" variant="outline" onClick={addResume}>
-              <Plus data-icon="inline-start" /> Add resume
+              <Plus data-icon="inline-start" /> Add résumé
             </Button>
           </div>
         </CardHeader>
@@ -139,11 +139,11 @@ export function Resumes({ initialDirectives }: ResumesProps) {
                 <FileText className="size-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm font-medium text-foreground">No resumes yet</p>
-                <p className="mt-1 text-xs text-muted-foreground">Click &quot;Add resume&quot; to paste in your first one.</p>
+                <p className="text-sm font-medium text-foreground">No résumés yet</p>
+                <p className="mt-1 text-xs text-muted-foreground">Click &quot;Add résumé&quot; to paste in your first one.</p>
               </div>
               <Button size="sm" variant="outline" onClick={addResume}>
-                <Plus data-icon="inline-start" /> Add resume
+                <Plus data-icon="inline-start" /> Add résumé
               </Button>
             </div>
           )}
@@ -154,7 +154,7 @@ export function Resumes({ initialDirectives }: ResumesProps) {
                 <Input
                   value={resume.label}
                   onChange={(e) => updateResume(resume.id, { label: e.target.value })}
-                  placeholder="Name this resume, e.g. Senior PM — AI, Head of Product"
+                  placeholder="Name this résumé, e.g. Senior PM — AI, Head of Product"
                   className="flex-1 font-medium"
                 />
                 <div className="flex shrink-0 items-center gap-2">
@@ -174,7 +174,7 @@ export function Resumes({ initialDirectives }: ResumesProps) {
                     variant="ghost"
                     size="icon"
                     className="text-muted-foreground hover:text-destructive"
-                    aria-label="Remove resume"
+                    aria-label="Remove résumé"
                     onClick={() => removeResume(resume.id)}
                   >
                     <X />
@@ -197,7 +197,7 @@ export function Resumes({ initialDirectives }: ResumesProps) {
                     <span className="text-muted-foreground">
                       {resume.fileName
                         ? <><span className="font-medium text-foreground">{resume.fileName}</span> — click to replace</>
-                        : "Upload PDF, DOCX, or TXT"}
+                        : "Upload résumé — PDF, DOCX, or TXT"}
                     </span>
                   </>
                 )}
@@ -224,7 +224,7 @@ export function Resumes({ initialDirectives }: ResumesProps) {
               <Textarea
                 value={resume.text}
                 onChange={(e) => updateResume(resume.id, { text: e.target.value })}
-                placeholder="Paste your resume text here..."
+                placeholder="Paste your résumé text here..."
                 className="min-h-56 resize-y font-mono text-xs leading-relaxed"
               />
               <p className="text-xs text-muted-foreground tabular-nums">{resume.text.length.toLocaleString()} characters</p>
@@ -288,7 +288,7 @@ export function Resumes({ initialDirectives }: ResumesProps) {
           {resumes.length > 0 && (
             <div className="flex justify-end">
               <Button onClick={() => save(resumes)} disabled={isPending}>
-                {isPending ? "Saving..." : "Save resumes"}
+                {isPending ? "Saving..." : "Save résumés"}
               </Button>
             </div>
           )}

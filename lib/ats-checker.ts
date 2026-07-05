@@ -71,13 +71,13 @@ export function runAtsChecks(resume: string, match: MatchDoc): AtsReport {
   // 1. Resume has content
   checks.push({
     id: "not-empty",
-    label: "Resume has content",
+    label: "Résumé has content",
     pass: wordCount >= 100,
     detail: wordCount >= 100
       ? `${wordCount} words detected.`
       : wordCount === 0
-        ? "No resume text found — paste your resume in the Settings page."
-        : `Only ${wordCount} words found — a full resume should have at least 100.`,
+        ? "No résumé text found — paste your résumé in the Résumés page."
+        : `Only ${wordCount} words found — a full résumé should have at least 100.`,
     severity: "error",
   })
 
@@ -126,7 +126,7 @@ export function runAtsChecks(resume: string, match: MatchDoc): AtsReport {
     pass: hasHeadings,
     detail: hasHeadings
       ? `Found standard sections: ${foundHeadings.slice(0, 4).join(", ")}.`
-      : "Could not detect standard section headings like Experience, Education, or Skills. ATS systems use these to categorise your resume.",
+      : "Could not detect standard section headings like Experience, Education, or Skills. ATS systems use these to categorise your résumé.",
     severity: "error",
   })
 
@@ -172,7 +172,7 @@ export function runAtsChecks(resume: string, match: MatchDoc): AtsReport {
     label: "Job title language present",
     pass: roleMentioned,
     detail: roleMentioned
-      ? `Resume references language from the target role "${match.role}".`
+      ? `Résumé references language from the target role "${match.role}".`
       : `Consider including language from the target role title "${match.role}" in your summary or experience sections.`,
     severity: "warning",
   })
@@ -181,13 +181,13 @@ export function runAtsChecks(resume: string, match: MatchDoc): AtsReport {
   const lengthOk = wordCount >= 200 && wordCount <= 1200
   checks.push({
     id: "length",
-    label: "Appropriate resume length (200–1,200 words)",
+    label: "Appropriate résumé length (200–1,200 words)",
     pass: lengthOk,
     detail: lengthOk
       ? `${wordCount} words — within the ideal range for ATS parsing.`
       : wordCount < 200
-        ? `At ${wordCount} words, the resume may be too sparse. Aim for at least 200.`
-        : `At ${wordCount} words this is quite long. ATS systems handle 1–2 page resumes best.`,
+        ? `At ${wordCount} words, the résumé may be too sparse. Aim for at least 200.`
+        : `At ${wordCount} words this is quite long. ATS systems handle 1–2 page résumés best.`,
     severity: "info",
   })
 
@@ -199,8 +199,8 @@ export function runAtsChecks(resume: string, match: MatchDoc): AtsReport {
     label: "No graphics or image-heavy layout detected",
     pass: !likelyHasGraphics,
     detail: !likelyHasGraphics
-      ? "Text density looks consistent with a plain-text resume."
-      : "Very short lines detected — if your resume uses icons, photos, or a graphical layout, ATS systems may skip large portions. Use a clean single-column text format.",
+      ? "Text density looks consistent with a plain-text résumé."
+      : "Very short lines detected — if your résumé uses icons, photos, or a graphical layout, ATS systems may skip large portions. Use a clean single-column text format.",
     severity: "warning",
   })
 

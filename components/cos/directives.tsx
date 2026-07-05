@@ -63,7 +63,7 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
     resumes: d?.resumes?.length
       ? d.resumes
       : d?.resumeText
-        ? [{ id: "default", label: "My Resume", text: d.resumeText, fileName: d.resumeFileName ?? "", isDefault: true }]
+        ? [{ id: "default", label: "My Résumé", text: d.resumeText, fileName: d.resumeFileName ?? "", isDefault: true }]
         : [],
     linkedinUrl: d?.linkedinUrl ?? "",
     defaultCoverLetter: d?.defaultCoverLetter ?? "",
@@ -217,7 +217,7 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
                   <span>$400k</span>
                 </div>
               </div>
-              <FieldDescription>Roles below your floor are auto-rejected by the Resume Scorer Agent.</FieldDescription>
+              <FieldDescription>Roles below your floor are auto-rejected by the Résumé Scorer Agent.</FieldDescription>
             </Field>
 
             <Field orientation="horizontal">
@@ -290,7 +290,7 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
                   <span>50</span>
                 </div>
               </div>
-              <FieldDescription>Your Resume Scorer Agent will surface up to this many roles in your daily digest.</FieldDescription>
+              <FieldDescription>Your Résumé Scorer Agent will surface up to this many roles in your daily digest.</FieldDescription>
             </Field>
 
             <Separator />
@@ -391,7 +391,7 @@ function DealbreakersTab({ state, set, buildPayload }: TabProps) {
           </span>
           <div>
             <CardTitle className="text-base">Dealbreakers</CardTitle>
-            <CardDescription>Any match that trips one of these is auto-rejected by the Resume Scorer Agent.</CardDescription>
+            <CardDescription>Any match that trips one of these is auto-rejected by the Résumé Scorer Agent.</CardDescription>
           </div>
         </div>
       </CardHeader>
