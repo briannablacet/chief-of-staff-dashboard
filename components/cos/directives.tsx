@@ -115,7 +115,7 @@ export function Directives({ initialDirectives, defaultTab }: DirectivesProps) {
           </TabsTrigger>
           <TabsTrigger value="dealbreakers">
             <Ban data-icon="inline-start" />
-            Dealbreakers
+            Settings
           </TabsTrigger>
           <TabsTrigger value="resume">
             <FileText data-icon="inline-start" />
@@ -323,7 +323,7 @@ function DealbreakersTab({ state, set, buildPayload }: TabProps) {
 
       <div className="flex gap-2">
         <Button onClick={save} disabled={isPending}>
-          {isPending ? "Saving..." : "Save dealbreakers"}
+          {isPending ? "Saving..." : "Save target companies and dealbreakers"}
         </Button>
       </div>
     </div>
