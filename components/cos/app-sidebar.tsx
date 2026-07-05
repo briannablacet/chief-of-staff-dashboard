@@ -23,9 +23,15 @@ const NAV: { key: ViewKey; label: string; sub: string; icon: typeof Inbox }[] = 
 export function AppSidebar({
   active,
   onNavigate,
+  profileName,
+  profileHeadline,
+  onProfileClick,
 }: {
   active: ViewKey
   onNavigate: (v: ViewKey) => void
+  profileName?: string
+  profileHeadline?: string
+  onProfileClick?: () => void
 }) {
   return (
     <nav
@@ -86,15 +92,27 @@ export function AppSidebar({
           </p>
         </div>
 
-        <div className="flex items-center gap-3 rounded-lg px-2 py-1">
-          <Avatar className="size-8">
-            <AvatarFallback className="bg-secondary text-xs text-secondary-foreground">AR</AvatarFallback>
+        <button
+          type="button"
+          onClick={onProfileClick}
+          className="flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent/50"
+        >
+          <Avatar className="size-8 shrink-0">
+            <AvatarFallback className="bg-secondary text-xs text-secondary-foreground">
+              {profileName
+                ? profileName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+                : "?"}
+            </AvatarFallback>
           </Avatar>
-          <div className="leading-tight">
-            <p className="text-sm font-medium text-sidebar-foreground">Alex Rivera</p>
-            <p className="text-xs text-muted-foreground">Senior PM &bull; Job seeking</p>
+          <div className="min-w-0 leading-tight">
+            <p className="truncate text-sm font-medium text-sidebar-foreground">
+              {profileName || "Set up your profile"}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {profileHeadline || "Click to add details"}
+            </p>
           </div>
-        </div>
+        </button>
       </div>
     </nav>
   )
