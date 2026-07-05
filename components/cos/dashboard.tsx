@@ -10,7 +10,7 @@ import { ThoughtLeadership } from "@/components/cos/thought-leadership"
 import { Resumes } from "@/components/cos/resumes"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
-import type { DirectivesDoc, AgentDoc, MatchDoc } from "@/lib/actions"
+import type { DirectivesDoc, AgentDoc, MatchDoc, CoverLetterEntry } from "@/lib/actions"
 
 const TITLES: Record<ViewKey, string> = {
   command: "Dashboard",
@@ -26,9 +26,10 @@ interface DashboardProps {
   initialDirectives: DirectivesDoc | null
   initialAgentConfigs: AgentDoc[]
   initialMatches: MatchDoc[]
+  initialCoverLetters: CoverLetterEntry[]
 }
 
-export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatches }: DashboardProps) {
+export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatches, initialCoverLetters }: DashboardProps) {
   const [view, setView] = useState<ViewKey>("command")
   const [mobileNav, setMobileNav] = useState(false)
   const [directivesTab, setDirectivesTab] = useState<string | undefined>(undefined)
@@ -122,7 +123,13 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
               defaultTab={directivesTab}
             />
           )}
-          {view === "matches" && <Matches initialMatches={initialMatches} initialSelectedMatchId={selectedMatchId} onMatchSelected={() => setSelectedMatchId(undefined)} resumes={initialDirectives?.resumes ?? []} />}
+          {view === "matches" && <Matches initialMatches={initialMatches} initialSelectedMatchId={selectedMatchId} onMatchSelected={() => setSelectedMatchId(undefined)} resumes={
+              initialDirectives?.resumes?.length
+                ? initialDirectives.resumes
+                : initialDirectives?.resumeText
+                  ? [{ id: "default", label: "My Résumé", text: initialDirectives.resumeText, fileName: initialDirectives.resumeFileName ?? "", isDefault: true }]
+                  : []
+            } initialCoverLetters={initialCoverLetters} />}
           {view === "thought-leadership" && <ThoughtLeadership targetTitles={initialDirectives?.titles} targetCompanies={initialDirectives?.dreamCompanies} />}
           {view === "resumes" && <Resumes initialDirectives={initialDirectives} />}
           {view === "agents" && (

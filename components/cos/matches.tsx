@@ -9,7 +9,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
   MapPin,
   Wallet,
   ExternalLink,
@@ -22,11 +21,14 @@ import {
 import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { updateMatchStatus, regenerateMatches, saveCoverLetter, saveResumeForMatch, type MatchDoc, type ResumeEntry } from "@/lib/actions"
+import { updateMatchStatus, regenerateMatches, saveCoverLetter, saveResumeForMatch, saveCoverLetterToLibrary, saveResumeEntry, type MatchDoc, type ResumeEntry, type CoverLetterEntry } from "@/lib/actions"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AtsChecklist } from "@/components/cos/ats-checklist"
+import { CoverLetterLibrary } from "@/components/cos/cover-letter-library"
 
 const statusStyles: Record<MatchDoc["status"], string> = {
   "New":        "bg-primary/10 text-primary",
@@ -40,9 +42,11 @@ interface MatchesProps {
   initialSelectedMatchId?: string
   onMatchSelected?: () => void
   resumes?: ResumeEntry[]
+  initialCoverLetters?: CoverLetterEntry[]
 }
 
-export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelected, resumes = [] }: MatchesProps) {
+export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelected, resumes = [], initialCoverLetters = [] }: MatchesProps) {
+  const [tab, setTab] = useState<"matches" | "cover-letters">("matches")
   const [matches, setMatches] = useState<MatchDoc[]>(initialMatches)
   const [selected, setSelected] = useState<MatchDoc | null>(
     initialSelectedMatchId ? (initialMatches.find((m) => m.matchId === initialSelectedMatchId) ?? null) : null
@@ -80,12 +84,46 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
         onStatusChange={handleStatusChange}
         onBack={() => setSelected(null)}
         resumes={resumes}
+        savedCoverLetters={initialCoverLetters}
       />
     )
   }
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Top-level tabs */}
+      <div className="flex border-b border-border">
+        <button
+          type="button"
+          onClick={() => setTab("matches")}
+          className={cn(
+            "px-4 pb-3 pt-1 text-sm font-medium transition-colors",
+            tab === "matches"
+              ? "border-b-2 border-foreground text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Matches
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("cover-letters")}
+          className={cn(
+            "px-4 pb-3 pt-1 text-sm font-medium transition-colors",
+            tab === "cover-letters"
+              ? "border-b-2 border-foreground text-foreground"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          Cover Letters
+        </button>
+      </div>
+
+      {tab === "cover-letters" && (
+        <CoverLetterLibrary initialLetters={initialCoverLetters} />
+      )}
+
+      {tab === "matches" && <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Every role that cleared your filters. Click any match for the full breakdown.
@@ -175,6 +213,7 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
           ))}
         </ul>
       </Card>
+      </>}
     </div>
   )
 }
@@ -184,16 +223,22 @@ function MatchDetail({
   onStatusChange,
   onBack,
   resumes = [],
+  savedCoverLetters = [],
 }: {
   match: MatchDoc
   onStatusChange: (matchId: string, status: MatchDoc["status"]) => void
   onBack: () => void
   resumes?: ResumeEntry[]
+  savedCoverLetters?: CoverLetterEntry[]
 }) {
   const defaultResume = resumes.find((r) => r.isDefault) ?? resumes[0] ?? null
   const initialResumeId = match.resumeId ?? defaultResume?.id ?? ""
   const [selectedResumeId, setSelectedResumeId] = useState(initialResumeId)
   const [savingResume, setSavingResume] = useState(false)
+  const [editingResume, setEditingResume] = useState(false)
+  const [editedResumeText, setEditedResumeText] = useState("")
+  const [editedResumeLabel, setEditedResumeLabel] = useState("")
+  const [savingResumeEdit, setSavingResumeEdit] = useState(false)
   const activeResume = resumes.find((r) => r.id === selectedResumeId) ?? defaultResume
 
   const handleResumeChange = async (id: string) => {
@@ -203,6 +248,27 @@ function MatchDetail({
       await saveResumeForMatch(match.matchId, id)
     } finally {
       setSavingResume(false)
+    }
+  }
+
+  const openResumeEditor = () => {
+    setEditedResumeText(activeResume?.text ?? "")
+    setEditedResumeLabel(activeResume?.label ?? "")
+    setEditingResume(true)
+  }
+
+  const saveResumeEdit = async (andClose: boolean) => {
+    if (!activeResume) return
+    setSavingResumeEdit(true)
+    try {
+      const updated: ResumeEntry = { ...activeResume, text: editedResumeText, label: editedResumeLabel }
+      await saveResumeEntry(updated)
+      toast.success("Résumé saved")
+      if (andClose) setEditingResume(false)
+    } catch {
+      toast.error("Failed to save résumé")
+    } finally {
+      setSavingResumeEdit(false)
     }
   }
 
@@ -229,6 +295,14 @@ function MatchDetail({
     setSavingLetter(true)
     try {
       await saveCoverLetter(match.matchId, coverLetter)
+      // Auto-save to library — use existing entry if this match already has one, otherwise create
+      const existingEntry = savedCoverLetters.find((l) => l.matchId === match.matchId)
+      await saveCoverLetterToLibrary({
+        id: existingEntry?.id ?? `cl-${match.matchId}`,
+        name: existingEntry?.name ?? `${match.company} Cover Letter`,
+        text: coverLetter,
+        matchId: match.matchId,
+      })
       toast.success("Cover letter saved")
     } catch {
       toast.error("Failed to save cover letter")
@@ -272,6 +346,31 @@ function MatchDetail({
                     ))
                 : <span className="text-muted-foreground">Click to edit your cover letter...</span>
               }
+            </div>
+          )}
+
+          {/* Saved cover letter picker */}
+          {savedCoverLetters.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-accent/30 px-3 py-2.5">
+              <span className="text-xs font-medium text-muted-foreground">Use saved cover letter:</span>
+              <Select
+                onValueChange={(id) => {
+                  const found = savedCoverLetters.find((l) => l.id === id)
+                  if (found) {
+                    setCoverLetter(found.text)
+                    setRawEditing(false)
+                  }
+                }}
+              >
+                <SelectTrigger className="h-8 min-w-48 text-xs">
+                  <SelectValue placeholder="Choose one..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {savedCoverLetters.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>{l.name || "Untitled"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
@@ -403,98 +502,141 @@ function MatchDetail({
         </div>
       </Card>
 
-      {/* Job req content */}
-      {match.jobReqContent && (
-        <Card className="p-6">
-          <h3 className="mb-3 text-sm font-semibold text-foreground">Job Description</h3>
+      {/* Job description + inline score breakdown */}
+      <Card className="p-6">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">Job Description</h3>
+        {match.jobReqContent ? (
           <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
             {match.jobReqContent}
           </p>
-        </Card>
-      )}
+        ) : (
+          <p className="text-sm text-muted-foreground">No job description available.</p>
+        )}
 
-      {/* Two-column content */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Score breakdown */}
-        <Card className="p-6">
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Score Breakdown</h3>
-          <div className="flex flex-col gap-2">
-            {match.breakdown.map((item) => (
-              <div
-                key={item.label}
-                className="flex items-start gap-3 rounded-lg border border-border bg-background/40 p-3"
-              >
-                {item.met ? (
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-                ) : (
-                  <XCircle className="mt-0.5 size-4 shrink-0 text-warning" />
-                )}
-                <div>
-                  <p className="text-sm font-medium text-foreground">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.note}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Resume selector + ATS check */}
-        <Card className="p-6">
-          <div className="mb-5">
-            <h3 className="mb-1 text-sm font-semibold text-foreground">Résumé</h3>
-            <p className="text-xs text-muted-foreground">Choose which résumé to use for this application. The ATS check below reflects the selected résumé.</p>
-          </div>
-
-          {resumes.length > 0 ? (
-            <div className="mb-5 flex flex-wrap items-center gap-3">
-              <label htmlFor="resume-select" className="text-xs font-medium text-muted-foreground">Applying with résumé</label>
-              <div className="relative">
-                <select
-                  id="resume-select"
-                  value={selectedResumeId}
-                  onChange={(e) => handleResumeChange(e.target.value)}
-                  className="h-9 appearance-none rounded-md border border-border bg-background pl-3 pr-8 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        {/* Score breakdown bar */}
+        {match.breakdown.length > 0 && (
+          <div className="mt-5 border-t border-border pt-5">
+            <p className="mb-3 text-xs font-medium text-muted-foreground">Score breakdown</p>
+            <div className="flex flex-wrap gap-2">
+              {match.breakdown.map((item) => (
+                <div
+                  key={item.label}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
+                    item.met
+                      ? "border-success/30 bg-success/10 text-success"
+                      : "border-warning/30 bg-warning/10 text-warning"
+                  )}
                 >
-                  {resumes.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.label || "Untitled résumé"}{r.isDefault ? " (default)" : ""}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                  {item.met
+                    ? <CheckCircle2 className="size-3 shrink-0" />
+                    : <XCircle className="size-3 shrink-0" />
+                  }
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Resume selector + ATS check */}
+      <Card className="p-6">
+        {editingResume ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">Edit Résumé</h3>
+              <Button variant="ghost" size="sm" onClick={() => setEditingResume(false)} className="-mr-2">
+                <ChevronLeft data-icon="inline-start" /> Back
+              </Button>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Résumé name</label>
+              <Input
+                value={editedResumeLabel}
+                onChange={(e) => setEditedResumeLabel(e.target.value)}
+                placeholder="e.g. Senior PM — AI"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Résumé text</label>
+              <Textarea
+                value={editedResumeText}
+                onChange={(e) => setEditedResumeText(e.target.value)}
+                className="min-h-72 resize-y font-mono text-xs leading-relaxed"
+                placeholder="Paste your résumé text here..."
+              />
+              <p className="text-xs text-muted-foreground tabular-nums">{editedResumeText.length.toLocaleString()} characters</p>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+              <Button variant="outline" size="sm" disabled={savingResumeEdit} onClick={() => saveResumeEdit(false)}>
+                {savingResumeEdit ? "Saving..." : "Save résumé"}
+              </Button>
+              <Button size="sm" disabled={savingResumeEdit} onClick={() => saveResumeEdit(true)}>
+                {savingResumeEdit ? "Saving..." : "Save and close"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mb-5">
+              <h3 className="mb-1 text-sm font-semibold text-foreground">Résumé</h3>
+              <p className="text-xs text-muted-foreground">Choose which résumé to use for this application. The ATS check below reflects the selected résumé.</p>
+            </div>
+
+            {resumes.length > 0 ? (
+              <div className="mb-5 flex flex-wrap items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground">Applying with résumé</span>
+                <Select value={selectedResumeId} onValueChange={handleResumeChange}>
+                  <SelectTrigger className="h-9 min-w-48">
+                    <SelectValue placeholder="Choose a résumé..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {resumes.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.label || "Untitled résumé"}{r.isDefault ? " (default)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {savingResume && <span className="text-xs text-muted-foreground">Saving...</span>}
+                {activeResume && (
+                  <Button variant="outline" size="sm" onClick={openResumeEditor}>
+                    <PenLine data-icon="inline-start" /> Edit résumé
+                  </Button>
+                )}
               </div>
-              {savingResume && <span className="text-xs text-muted-foreground">Saving...</span>}
-            </div>
-          ) : (
-            <p className="mb-4 text-xs text-muted-foreground">
-              No résumés found. Add one in <span className="font-medium text-foreground">Résumés</span>.
-            </p>
-          )}
+            ) : (
+              <p className="mb-4 text-xs text-muted-foreground">
+                No résumés found. Add one in <span className="font-medium text-foreground">Résumés</span>.
+              </p>
+            )}
 
-          {activeResume && <AtsChecklist resume={activeResume.text} match={match} />}
-        </Card>
+            {activeResume && <AtsChecklist resume={activeResume.text} match={match} />}
+          </>
+        )}
+      </Card>
 
-        {/* Cover letter */}
-        <Card className="flex flex-col gap-0 py-0">
-          <div className="flex-1 px-5 pt-5 pb-4">
-            <h3 className="mb-3 text-sm font-semibold text-foreground">Cover Letter</h3>
-            <div className="line-clamp-6 text-xs text-muted-foreground">
-              {coverLetter
-                ? coverLetter.split(/\n\n+/).map((para, i) => (
-                    <p key={i} className="mb-3 leading-relaxed last:mb-0">{para.replace(/\n/g, ' ')}</p>
-                  ))
-                : <p className="leading-relaxed">No cover letter generated yet.</p>
-              }
-            </div>
+      {/* Cover letter */}
+      <Card className="flex flex-col gap-0 py-0">
+        <div className="flex-1 px-5 pt-5 pb-4">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">Cover Letter</h3>
+          <div className="line-clamp-6 text-xs text-muted-foreground">
+            {coverLetter
+              ? coverLetter.split(/\n\n+/).map((para, i) => (
+                  <p key={i} className="mb-3 leading-relaxed last:mb-0">{para.replace(/\n/g, ' ')}</p>
+                ))
+              : <p className="leading-relaxed">No cover letter generated yet.</p>
+            }
           </div>
-          <div className="border-t border-border px-5 py-3">
-            <Button size="sm" variant="secondary" className="w-full" onClick={() => setEditingLetter(true)}>
-              <PenLine data-icon="inline-start" />
-              Open &amp; Edit
-            </Button>
-          </div>
-        </Card>
-      </div>
+        </div>
+        <div className="border-t border-border px-5 py-3">
+          <Button size="sm" variant="secondary" className="w-full" onClick={() => setEditingLetter(true)}>
+            <PenLine data-icon="inline-start" />
+            Open &amp; Edit
+          </Button>
+        </div>
+      </Card>
     </div>
   )
 }
