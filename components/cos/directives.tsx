@@ -165,6 +165,70 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Target Roles</CardTitle>
+          <CardDescription>Define the roles worth your Chief of Staff&apos;s attention.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="titles">Target job titles</FieldLabel>
+              <Input id="titles" value={state.titles} onChange={(e) => set("titles", e.target.value)} />
+              <FieldDescription>Separate multiple titles with commas.</FieldDescription>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="location">Location preferences</FieldLabel>
+              <div className="relative">
+                <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input id="location" className="pl-9" value={state.locations} onChange={(e) => set("locations", e.target.value)} />
+              </div>
+              <FieldDescription>Add cities or &quot;Remote&quot; regions.</FieldDescription>
+            </Field>
+
+            <Separator />
+
+            <Field>
+              <FieldLabel>
+                Target salary range
+                <Badge variant="secondary" className="ml-2 tabular-nums text-primary">
+                  {`$${state.salary[0]}k – $${state.salary[1]}k`}
+                </Badge>
+              </FieldLabel>
+              <div className="px-1 pt-3 pb-1">
+                <Slider
+                  value={state.salary}
+                  onValueChange={(v) => set("salary", v as number[])}
+                  min={80}
+                  max={400}
+                  step={5}
+                  aria-label="Salary range"
+                />
+                <div className="mt-2 flex justify-between text-xs text-muted-foreground tabular-nums">
+                  <span>$80k</span>
+                  <span>$400k</span>
+                </div>
+              </div>
+              <FieldDescription>Roles below your floor are auto-rejected by the Resume Scorer Agent.</FieldDescription>
+            </Field>
+
+            <Field orientation="horizontal">
+              <Button onClick={save} disabled={isPending}>
+                {isPending ? "Saving..." : "Save match settings"}
+              </Button>
+              <Button variant="ghost" className="text-muted-foreground" onClick={() => {
+                set("titles", "Senior Product Manager, Group PM, Principal PM")
+                set("locations", "Remote (US), New York, San Francisco")
+                set("salary", [190, 270])
+              }}>
+                Reset
+              </Button>
+            </Field>
+          </FieldGroup>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Match Preferences</CardTitle>
           <CardDescription>Control the quality bar and daily volume of your matches.</CardDescription>
         </CardHeader>
@@ -244,70 +308,6 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
                 </div>
               </div>
               <FieldDescription>Your Ghostwriter Agent will draft cover letters for your top matches up to this limit.</FieldDescription>
-            </Field>
-          </FieldGroup>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Target Roles</CardTitle>
-          <CardDescription>Define the roles worth your Chief of Staff&apos;s attention.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="titles">Target job titles</FieldLabel>
-              <Input id="titles" value={state.titles} onChange={(e) => set("titles", e.target.value)} />
-              <FieldDescription>Separate multiple titles with commas.</FieldDescription>
-            </Field>
-
-            <Field>
-              <FieldLabel htmlFor="location">Location preferences</FieldLabel>
-              <div className="relative">
-                <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="location" className="pl-9" value={state.locations} onChange={(e) => set("locations", e.target.value)} />
-              </div>
-              <FieldDescription>Add cities or &quot;Remote&quot; regions.</FieldDescription>
-            </Field>
-
-            <Separator />
-
-            <Field>
-              <FieldLabel>
-                Target salary range
-                <Badge variant="secondary" className="ml-2 tabular-nums text-primary">
-                  {`$${state.salary[0]}k – $${state.salary[1]}k`}
-                </Badge>
-              </FieldLabel>
-              <div className="px-1 pt-3 pb-1">
-                <Slider
-                  value={state.salary}
-                  onValueChange={(v) => set("salary", v as number[])}
-                  min={80}
-                  max={400}
-                  step={5}
-                  aria-label="Salary range"
-                />
-                <div className="mt-2 flex justify-between text-xs text-muted-foreground tabular-nums">
-                  <span>$80k</span>
-                  <span>$400k</span>
-                </div>
-              </div>
-              <FieldDescription>Roles below your floor are auto-rejected by the Resume Scorer Agent.</FieldDescription>
-            </Field>
-
-            <Field orientation="horizontal">
-              <Button onClick={save} disabled={isPending}>
-                {isPending ? "Saving..." : "Save match settings"}
-              </Button>
-              <Button variant="ghost" className="text-muted-foreground" onClick={() => {
-                set("titles", "Senior Product Manager, Group PM, Principal PM")
-                set("locations", "Remote (US), New York, San Francisco")
-                set("salary", [190, 270])
-              }}>
-                Reset
-              </Button>
             </Field>
           </FieldGroup>
         </CardContent>
