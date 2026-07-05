@@ -501,139 +501,141 @@ function MatchDetail({
         </div>
       </Card>
 
-      {/* Job req content */}
-      {match.jobReqContent && (
-        <Card className="p-6">
-          <h3 className="mb-3 text-sm font-semibold text-foreground">Job Description</h3>
+      {/* Job description + inline score breakdown */}
+      <Card className="p-6">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">Job Description</h3>
+        {match.jobReqContent ? (
           <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
             {match.jobReqContent}
           </p>
-        </Card>
-      )}
+        ) : (
+          <p className="text-sm text-muted-foreground">No job description available.</p>
+        )}
 
-      {/* Two-column content */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Score breakdown */}
-        <Card className="p-6">
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Score Breakdown</h3>
-          <div className="flex flex-col gap-2">
-            {match.breakdown.map((item) => (
-              <div
-                key={item.label}
-                className="flex items-start gap-3 rounded-lg border border-border bg-background/40 p-3"
-              >
-                {item.met ? (
-                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-                ) : (
-                  <XCircle className="mt-0.5 size-4 shrink-0 text-warning" />
-                )}
-                <div>
-                  <p className="text-sm font-medium text-foreground">{item.label}</p>
-                  <p className="text-xs text-muted-foreground">{item.note}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Resume selector + ATS check */}
-        <Card className="p-6">
-          {editingResume ? (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-foreground">Edit Résumé</h3>
-                <Button variant="ghost" size="sm" onClick={() => setEditingResume(false)} className="-mr-2">
-                  <ChevronLeft data-icon="inline-start" /> Back
-                </Button>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Résumé name</label>
-                <Input
-                  value={editedResumeLabel}
-                  onChange={(e) => setEditedResumeLabel(e.target.value)}
-                  placeholder="e.g. Senior PM — AI"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Résumé text</label>
-                <Textarea
-                  value={editedResumeText}
-                  onChange={(e) => setEditedResumeText(e.target.value)}
-                  className="min-h-72 resize-y font-mono text-xs leading-relaxed"
-                  placeholder="Paste your résumé text here..."
-                />
-                <p className="text-xs text-muted-foreground tabular-nums">{editedResumeText.length.toLocaleString()} characters</p>
-              </div>
-              <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-                <Button variant="outline" size="sm" disabled={savingResumeEdit} onClick={() => saveResumeEdit(false)}>
-                  {savingResumeEdit ? "Saving..." : "Save résumé"}
-                </Button>
-                <Button size="sm" disabled={savingResumeEdit} onClick={() => saveResumeEdit(true)}>
-                  {savingResumeEdit ? "Saving..." : "Save and close"}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="mb-5">
-                <h3 className="mb-1 text-sm font-semibold text-foreground">Résumé</h3>
-                <p className="text-xs text-muted-foreground">Choose which résumé to use for this application. The ATS check below reflects the selected résumé.</p>
-              </div>
-
-              {resumes.length > 0 ? (
-                <div className="mb-5 flex flex-wrap items-center gap-3">
-                  <span className="text-xs font-medium text-muted-foreground">Applying with résumé</span>
-                  <Select value={selectedResumeId} onValueChange={handleResumeChange}>
-                    <SelectTrigger className="h-9 min-w-48">
-                      <SelectValue placeholder="Choose a résumé..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {resumes.map((r) => (
-                        <SelectItem key={r.id} value={r.id}>
-                          {r.label || "Untitled résumé"}{r.isDefault ? " (default)" : ""}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {savingResume && <span className="text-xs text-muted-foreground">Saving...</span>}
-                  {activeResume && (
-                    <Button variant="outline" size="sm" onClick={openResumeEditor}>
-                      <PenLine data-icon="inline-start" /> Edit résumé
-                    </Button>
+        {/* Score breakdown bar */}
+        {match.breakdown.length > 0 && (
+          <div className="mt-5 border-t border-border pt-5">
+            <p className="mb-3 text-xs font-medium text-muted-foreground">Score breakdown</p>
+            <div className="flex flex-wrap gap-2">
+              {match.breakdown.map((item) => (
+                <div
+                  key={item.label}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium",
+                    item.met
+                      ? "border-success/30 bg-success/10 text-success"
+                      : "border-warning/30 bg-warning/10 text-warning"
                   )}
+                >
+                  {item.met
+                    ? <CheckCircle2 className="size-3 shrink-0" />
+                    : <XCircle className="size-3 shrink-0" />
+                  }
+                  <span>{item.label}</span>
                 </div>
-              ) : (
-                <p className="mb-4 text-xs text-muted-foreground">
-                  No résumés found. Add one in <span className="font-medium text-foreground">Résumés</span>.
-                </p>
-              )}
-
-              {activeResume && <AtsChecklist resume={activeResume.text} match={match} />}
-            </>
-          )}
-        </Card>
-
-        {/* Cover letter */}
-        <Card className="flex flex-col gap-0 py-0">
-          <div className="flex-1 px-5 pt-5 pb-4">
-            <h3 className="mb-3 text-sm font-semibold text-foreground">Cover Letter</h3>
-            <div className="line-clamp-6 text-xs text-muted-foreground">
-              {coverLetter
-                ? coverLetter.split(/\n\n+/).map((para, i) => (
-                    <p key={i} className="mb-3 leading-relaxed last:mb-0">{para.replace(/\n/g, ' ')}</p>
-                  ))
-                : <p className="leading-relaxed">No cover letter generated yet.</p>
-              }
+              ))}
             </div>
           </div>
-          <div className="border-t border-border px-5 py-3">
-            <Button size="sm" variant="secondary" className="w-full" onClick={() => setEditingLetter(true)}>
-              <PenLine data-icon="inline-start" />
-              Open &amp; Edit
-            </Button>
+        )}
+      </Card>
+
+      {/* Resume selector + ATS check */}
+      <Card className="p-6">
+        {editingResume ? (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">Edit Résumé</h3>
+              <Button variant="ghost" size="sm" onClick={() => setEditingResume(false)} className="-mr-2">
+                <ChevronLeft data-icon="inline-start" /> Back
+              </Button>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Résumé name</label>
+              <Input
+                value={editedResumeLabel}
+                onChange={(e) => setEditedResumeLabel(e.target.value)}
+                placeholder="e.g. Senior PM — AI"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Résumé text</label>
+              <Textarea
+                value={editedResumeText}
+                onChange={(e) => setEditedResumeText(e.target.value)}
+                className="min-h-72 resize-y font-mono text-xs leading-relaxed"
+                placeholder="Paste your résumé text here..."
+              />
+              <p className="text-xs text-muted-foreground tabular-nums">{editedResumeText.length.toLocaleString()} characters</p>
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+              <Button variant="outline" size="sm" disabled={savingResumeEdit} onClick={() => saveResumeEdit(false)}>
+                {savingResumeEdit ? "Saving..." : "Save résumé"}
+              </Button>
+              <Button size="sm" disabled={savingResumeEdit} onClick={() => saveResumeEdit(true)}>
+                {savingResumeEdit ? "Saving..." : "Save and close"}
+              </Button>
+            </div>
           </div>
-        </Card>
-      </div>
+        ) : (
+          <>
+            <div className="mb-5">
+              <h3 className="mb-1 text-sm font-semibold text-foreground">Résumé</h3>
+              <p className="text-xs text-muted-foreground">Choose which résumé to use for this application. The ATS check below reflects the selected résumé.</p>
+            </div>
+
+            {resumes.length > 0 ? (
+              <div className="mb-5 flex flex-wrap items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground">Applying with résumé</span>
+                <Select value={selectedResumeId} onValueChange={handleResumeChange}>
+                  <SelectTrigger className="h-9 min-w-48">
+                    <SelectValue placeholder="Choose a résumé..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {resumes.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        {r.label || "Untitled résumé"}{r.isDefault ? " (default)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {savingResume && <span className="text-xs text-muted-foreground">Saving...</span>}
+                {activeResume && (
+                  <Button variant="outline" size="sm" onClick={openResumeEditor}>
+                    <PenLine data-icon="inline-start" /> Edit résumé
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <p className="mb-4 text-xs text-muted-foreground">
+                No résumés found. Add one in <span className="font-medium text-foreground">Résumés</span>.
+              </p>
+            )}
+
+            {activeResume && <AtsChecklist resume={activeResume.text} match={match} />}
+          </>
+        )}
+      </Card>
+
+      {/* Cover letter */}
+      <Card className="flex flex-col gap-0 py-0">
+        <div className="flex-1 px-5 pt-5 pb-4">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">Cover Letter</h3>
+          <div className="line-clamp-6 text-xs text-muted-foreground">
+            {coverLetter
+              ? coverLetter.split(/\n\n+/).map((para, i) => (
+                  <p key={i} className="mb-3 leading-relaxed last:mb-0">{para.replace(/\n/g, ' ')}</p>
+                ))
+              : <p className="leading-relaxed">No cover letter generated yet.</p>
+            }
+          </div>
+        </div>
+        <div className="border-t border-border px-5 py-3">
+          <Button size="sm" variant="secondary" className="w-full" onClick={() => setEditingLetter(true)}>
+            <PenLine data-icon="inline-start" />
+            Open &amp; Edit
+          </Button>
+        </div>
+      </Card>
     </div>
   )
 }
