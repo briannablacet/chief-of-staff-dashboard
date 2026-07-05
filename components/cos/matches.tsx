@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import useSWR from "swr"
 import { toast } from "sonner"
 import {
   CheckCircle2,
@@ -47,7 +48,12 @@ interface MatchesProps {
 
 export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelected, resumes = [], initialCoverLetters = [] }: MatchesProps) {
   const [tab, setTab] = useState<"matches" | "cover-letters">("matches")
-  const [matches, setMatches] = useState<MatchDoc[]>(initialMatches)
+  const { data: fetchedMatches, mutate, isValidating } = useSWR<MatchDoc[]>(
+    "/api/matches",
+    (url: string) => fetch(url).then((r) => r.json()),
+    { fallbackData: initialMatches, revalidateOnFocus: false }
+  )
+  const matches = fetchedMatches ?? initialMatches
   const [selected, setSelected] = useState<MatchDoc | null>(
     initialSelectedMatchId ? (initialMatches.find((m) => m.matchId === initialSelectedMatchId) ?? null) : null
   )
@@ -121,10 +127,11 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
           <Button
             size="sm"
             variant="outline"
-            onClick={() => window.location.reload()}
+            disabled={isValidating}
+            onClick={() => mutate()}
           >
-            <RefreshCw data-icon="inline-start" />
-            Refresh
+            <RefreshCw data-icon="inline-start" className={isValidating ? "animate-spin" : ""} />
+            {isValidating ? "Refreshing..." : "Refresh"}
           </Button>
         </div>
       </div>

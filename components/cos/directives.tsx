@@ -669,10 +669,6 @@ export function AgentsTab({ initialAgentConfigs }: { initialAgentConfigs: AgentD
       const msg = `Found ${data.saved} new match${data.saved !== 1 ? "es" : ""}`
       setRunResult(msg)
       toast.success(`Pipeline complete — ${msg} saved`)
-      if (data.saved > 0) {
-        // Reload the page so the matches list picks up the new results
-        window.location.reload()
-      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Pipeline failed")
     } finally {
