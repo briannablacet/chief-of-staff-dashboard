@@ -19,7 +19,7 @@ const TITLES: Record<ViewKey, string> = {
   matches: "Matches & Cover Letters",
   "thought-leadership": "Thought Leadership",
   agents: "Agent Setup",
-  resumes: "Resumes",
+  resumes: "Résumés",
 }
 
 interface DashboardProps {

@@ -441,13 +441,13 @@ function MatchDetail({
         {/* Resume selector + ATS check */}
         <Card className="p-6">
           <div className="mb-5">
-            <h3 className="mb-1 text-sm font-semibold text-foreground">Resume</h3>
-            <p className="text-xs text-muted-foreground">Choose which resume to use for this application. The ATS check below reflects the selected resume.</p>
+            <h3 className="mb-1 text-sm font-semibold text-foreground">Résumé</h3>
+            <p className="text-xs text-muted-foreground">Choose which résumé to use for this application. The ATS check below reflects the selected résumé.</p>
           </div>
 
           {resumes.length > 0 ? (
             <div className="mb-5 flex flex-wrap items-center gap-3">
-              <label htmlFor="resume-select" className="text-xs font-medium text-muted-foreground">Applying with</label>
+              <label htmlFor="resume-select" className="text-xs font-medium text-muted-foreground">Applying with résumé</label>
               <div className="relative">
                 <select
                   id="resume-select"
@@ -457,7 +457,7 @@ function MatchDetail({
                 >
                   {resumes.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {r.label || "Untitled resume"}{r.isDefault ? " (default)" : ""}
+                      {r.label || "Untitled résumé"}{r.isDefault ? " (default)" : ""}
                     </option>
                   ))}
                 </select>
@@ -467,7 +467,7 @@ function MatchDetail({
             </div>
           ) : (
             <p className="mb-4 text-xs text-muted-foreground">
-              No resumes found. Add one in <span className="font-medium text-foreground">Settings → Resumes</span>.
+              No résumés found. Add one in <span className="font-medium text-foreground">Résumés</span>.
             </p>
           )}
 

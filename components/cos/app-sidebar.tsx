@@ -19,7 +19,7 @@ const NAV: { key: ViewKey; label: string; sub: string; icon: typeof Inbox }[] = 
   { key: 'command',            label: 'Dashboard',              sub: 'Daily digest',          icon: LayoutDashboard },
   { key: 'matches',            label: 'Matches & Cover Letters', sub: 'Output archive',        icon: Inbox },
   { key: 'thought-leadership', label: 'Thought Leadership',     sub: 'LinkedIn post ideas',   icon: PenLine },
-  { key: 'resumes',            label: 'Resumes',                sub: 'Manage your resumes',   icon: FileText },
+  { key: 'resumes',            label: 'Résumés',                sub: 'Manage your résumés',   icon: FileText },
   { key: 'directives',         label: 'Settings',               sub: 'Profile & preferences', icon: SlidersHorizontal },
   { key: 'agents',             label: 'Agent Setup',            sub: 'Configure your agents', icon: Bot },
 ]
