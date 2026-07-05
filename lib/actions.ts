@@ -280,27 +280,36 @@ function buildCoverLetter({
   title: string
   suffix: string
 }): string {
-  const role = `${title}, ${suffix}`
+  // [Role] = just the job title (reads naturally in a sentence)
+  // [Team] = the sub-team / area (e.g. "Growth", "Platform")
+  // [RoleFull] = "Senior PM, Growth" for cases where the full label is wanted
 
-  // If the user has saved a default cover letter, use it as the base and
-  // substitute common placeholders so each letter is tailored to the role.
   if (defaultCoverLetter.trim()) {
     return defaultCoverLetter
       .replace(/\[Company\]/gi, company)
-      .replace(/\[Role\]/gi, role)
+      .replace(/\[RoleFull\]/gi, `${title}, ${suffix}`)
+      .replace(/\[Role\]/gi, title)
+      .replace(/\[Team\]/gi, suffix)
       .replace(/\[Title\]/gi, title)
       .replace(/\[Name\]/gi, name)
       .replace(/\[Your Name\]/gi, name)
       .replace(/\[Headline\]/gi, headline)
   }
 
-  // Fallback template when no default has been saved yet.
+  // Fallback template — used when no default cover letter has been saved yet.
+  const headlineLine = headline ? ` as ${headline}` : ""
   return [
     `Dear ${company} Hiring Team,`,
-    `I am excited to apply for the ${role} role at ${company}. Throughout my career${headline ? ` as ${headline}` : ""}, I have built products that move the needle on metrics that matter — and I believe ${company} is exactly the kind of company where that work can have outsized impact.`,
-    `The ${suffix} area is one I know well. I thrive at the intersection of strategy and execution: defining the roadmap, aligning stakeholders, and working closely with engineering and design to ship with quality and speed.`,
-    `I would welcome the chance to talk about how my background fits what you are building. Thank you for your time and consideration.`,
-    `Best,\n${name}`,
+
+    `I am writing to express my strong interest in the ${title} role on your ${suffix} team.`,
+
+    `Throughout my career${headlineLine}, I have focused on shipping products that create real, measurable impact — and everything I know about ${company} tells me this is exactly the kind of environment where that approach thrives.`,
+
+    `The ${suffix} space is an area I know well. I bring experience defining product strategy, aligning cross-functional stakeholders, and working closely with engineering and design to move from ambiguity to execution without losing momentum. I am particularly drawn to ${company} because of the scale of the problems you are solving and the caliber of the team you have built to solve them.`,
+
+    `I would love the opportunity to talk about how my background maps to what you are building on the ${suffix} team. Thank you for your time and consideration — I look forward to the conversation.`,
+
+    `Best regards,\n${name}`,
   ].join("\n\n")
 }
 
