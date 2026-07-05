@@ -21,7 +21,7 @@ import { getDb } from "@/lib/mongodb"
 import { fetchAdzunaJobs, fetchRemotiveJobs, type RawJob } from "@/lib/job-fetcher"
 import type { DirectivesDoc, MatchDoc, AgentDoc } from "@/lib/actions"
 
-const USER_ID = process.env.HARDCODED_USER_ID ?? "default-user"
+const USER_ID = "default"
 
 // How long the route is allowed to run (Vercel Pro = 300s, Hobby = 60s)
 export const maxDuration = 300
