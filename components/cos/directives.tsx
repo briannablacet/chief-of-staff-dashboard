@@ -115,7 +115,7 @@ export function Directives({ initialDirectives, defaultTab }: DirectivesProps) {
           </TabsTrigger>
           <TabsTrigger value="dealbreakers">
             <Ban data-icon="inline-start" />
-            {"Settings"}
+            Settings
           </TabsTrigger>
           <TabsTrigger value="resume">
             <FileText data-icon="inline-start" />
@@ -260,7 +260,7 @@ function DealbreakersTab({ state, set, buildPayload }: TabProps) {
     startTransition(async () => {
       try {
         await saveDirectives(buildPayload())
-        toast.success("Dealbreakers saved")
+        toast.success("Settings saved")
       } catch {
         toast.error("Failed to save — check your MongoDB connection")
       }
