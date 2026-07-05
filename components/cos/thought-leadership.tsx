@@ -28,45 +28,92 @@ function generatePostIdeas(titles: string[], companies: string[]): PostIdea[] {
   const secondCompany = companies[1] ?? companies[0] ?? 'fast-growing startups'
   const roleShort = primaryTitle.replace(/^(Senior |Staff |Principal |Group |Lead )/, '')
 
-  // "a" vs "an" helper
-  const article = (s: string) => /^[aeiou]/i.test(s) ? 'an' : 'a'
+  // "a" vs "an" — trim first, also handle common initialisms (AI, ML, API, etc.)
+  const article = (s: string) => {
+    const w = s.trim()
+    // Initialisms starting with vowel sounds: A, E, F, H, I, L, M, N, O, R, S, X
+    if (/^(AI|ML|API|NLP|NLU|AR|VR|XR|MR|LLM|NPC)\b/i.test(w)) return 'an'
+    return /^[aeiou]/i.test(w) ? 'an' : 'a'
+  }
 
   return [
     {
       id: 'tl-1',
       topic: `${primaryTitle} Strategy`,
       hook: `The hardest part of being ${article(primaryTitle)} ${primaryTitle} isn\u2019t the roadmap.`,
-      body: `The hardest part of being ${article(primaryTitle)} ${primaryTitle} isn\u2019t the roadmap.\n\nIt\u2019s the 40 conversations that have to happen before a single line gets written.\n\nAlignment is the product. The roadmap is just proof you achieved it.\n\n3 things I do before I touch a planning doc:\n1. Talk to the engineer who\u2019ll build it first\n2. Find the stakeholder most likely to say no \u2014 and go there second\n3. Ask: what would have to be true for this to be obviously wrong?\n\nWhat\u2019s your pre-roadmap ritual?`,
+      body: [
+        `The hardest part of being ${article(primaryTitle)} ${primaryTitle} isn\u2019t the roadmap.`,
+        `It\u2019s the 40 conversations that have to happen before a single line gets written.`,
+        `Alignment is the product. The roadmap is just proof you achieved it.`,
+        `3 things I do before I touch a planning doc:\n1. Talk to the engineer who\u2019ll build it first\n2. Find the stakeholder most likely to say no \u2014 and go there second\n3. Ask: what would have to be true for this to be obviously wrong?`,
+        `What\u2019s your pre-roadmap ritual?`,
+      ].join('\n\n'),
     },
     {
       id: 'tl-2',
       topic: 'Career Growth',
       hook: `What nobody tells you about making the jump to ${secondTitle}.`,
-      body: `What nobody tells you about making the jump to ${secondTitle}:\n\nThe skills that got you promoted are not the skills that will make you effective in the new role.\n\nYou stop being the person with the best answer. You become the person who creates the conditions for the best answer to emerge.\n\nThe hardest part? Letting go of being right and optimizing for the team being right.\n\nWhat was the biggest mindset shift at your last level change?`,
+      body: [
+        `What nobody tells you about making the jump to ${secondTitle}:`,
+        `The skills that got you promoted are not the skills that will make you effective in the new role.`,
+        `You stop being the person with the best answer. You become the person who creates the conditions for the best answer to emerge.`,
+        `The hardest part? Letting go of being right and optimizing for the team being right.`,
+        `What was the biggest mindset shift at your last level change?`,
+      ].join('\n\n'),
     },
     {
       id: 'tl-3',
       topic: 'Industry Perspective',
       hook: `I\u2019ve interviewed at ${primaryCompany} and ${secondCompany}. Here\u2019s the difference.`,
-      body: `I\u2019ve interviewed at ${primaryCompany} and ${secondCompany}. Here\u2019s the real difference between them:\n\nIt\u2019s not the perks or the tech stack. It\u2019s the quality of the questions they ask.\n\n${primaryCompany} asked: \u201cWalk me through a decision you made with incomplete data.\u201d\n${secondCompany} asked: \u201cWhat\u2019s a product you use every day that you\u2019d redesign?\u201d\n\nBoth are great. But they reveal very different things about what they optimize for.\n\nThe best career signal in any interview: are they curious about how you think, or just what you\u2019ve shipped?\n\nWhat\u2019s the best interview question you\u2019ve been asked?`,
+      body: [
+        `I\u2019ve interviewed at ${primaryCompany} and ${secondCompany}. Here\u2019s the real difference between them:`,
+        `It\u2019s not the perks or the tech stack. It\u2019s the quality of the questions they ask.`,
+        `${primaryCompany} asked: \u201cWalk me through a decision you made with incomplete data.\u201d\n${secondCompany} asked: \u201cWhat\u2019s a product you use every day that you\u2019d redesign?\u201d`,
+        `Both are great. But they reveal very different things about what they optimize for.`,
+        `The best career signal in any interview: are they curious about how you think, or just what you\u2019ve shipped?`,
+        `What\u2019s the best interview question you\u2019ve been asked?`,
+      ].join('\n\n'),
     },
     {
       id: 'tl-4',
       topic: 'Leadership',
       hook: 'The meeting that changed how I think about prioritization.',
-      body: `The meeting that changed how I think about prioritization:\n\nWe had 14 items on the roadmap. All were \u201ccritical.\u201d I asked the team to stack-rank them.\n\nWe spent 90 minutes going in circles \u2014 everyone protecting their domain.\n\nThen I asked a different question: \u201cIf we could only ship one thing before the year ended and it had to matter to a customer, what would it be?\u201d\n\nSilence. Then one answer. Then everyone agreed.\n\nSometimes the prioritization problem is actually a framing problem.\n\nWhat question unstuck your last planning cycle?`,
+      body: [
+        `The meeting that changed how I think about prioritization:`,
+        `We had 14 items on the roadmap. All were \u201ccritical.\u201d I asked the team to stack-rank them.`,
+        `We spent 90 minutes going in circles \u2014 everyone protecting their domain.`,
+        `Then I asked a different question: \u201cIf we could only ship one thing before the year ended and it had to matter to a customer, what would it be?\u201d`,
+        `Silence. Then one answer. Then everyone agreed.`,
+        `Sometimes the prioritization problem is actually a framing problem.`,
+        `What question unstuck your last planning cycle?`,
+      ].join('\n\n'),
     },
     {
       id: 'tl-5',
       topic: 'AI & Product',
       hook: `AI won\u2019t replace ${primaryTitle}s. But it will replace certain habits.`,
-      body: `AI won\u2019t replace ${primaryTitle}s. But it will replace certain habits.\n\nSpecifically: the habit of making decisions slowly because synthesis takes time.\n\nThe teams I\u2019m seeing win right now are using AI to compress the time between \u201chere\u2019s the data\u201d and \u201chere\u2019s what we should do\u201d \u2014 not to automate the decision, but to get to the hard conversation faster.\n\nThe ${primaryTitle}\u2019s job isn\u2019t going away. The excuse of \u201cI haven\u2019t had time to analyze it yet\u201d is.\n\nHow are you using AI to change your decision-making process?`,
+      body: [
+        `AI won\u2019t replace ${primaryTitle}s. But it will replace certain habits.`,
+        `Specifically: the habit of making decisions slowly because synthesis takes time.`,
+        `The teams I\u2019m seeing win right now are using AI to compress the time between \u201chere\u2019s the data\u201d and \u201chere\u2019s what we should do\u201d \u2014 not to automate the decision, but to get to the hard conversation faster.`,
+        `The ${primaryTitle}\u2019s job isn\u2019t going away. The excuse of \u201cI haven\u2019t had time to analyze it yet\u201d is.`,
+        `How are you using AI to change your decision-making process?`,
+      ].join('\n\n'),
     },
     {
       id: 'tl-6',
       topic: 'Shipping',
       hook: 'The feature we almost didn\u2019t ship taught me the most.',
-      body: `The feature we almost didn\u2019t ship taught me the most.\n\nIt was 80% done for three sprints. Engineers were proud of it. Design had sweated every pixel.\n\nBut every time we reviewed it, something felt off. We kept adding scope to fix a feeling.\n\nFinally I asked: \u201cIs this a quality problem, or are we afraid of what users will say?\u201d\n\nIt was the second thing.\n\nWe shipped it. Users loved the core. They told us exactly what to fix. We fixed it in two weeks.\n\nDone and learning beats perfect and waiting every time.\n\nWhat\u2019s sitting at 80% on your roadmap right now?`,
+      body: [
+        `The feature we almost didn\u2019t ship taught me the most.`,
+        `It was 80% done for three sprints. Engineers were proud of it. Design had sweated every pixel.`,
+        `But every time we reviewed it, something felt off. We kept adding scope to fix a feeling.`,
+        `Finally I asked: \u201cIs this a quality problem, or are we afraid of what users will say?\u201d`,
+        `It was the second thing.`,
+        `We shipped it. Users loved the core. They told us exactly what to fix. We fixed it in two weeks.`,
+        `Done and learning beats perfect and waiting every time.`,
+        `What\u2019s sitting at 80% on your roadmap right now?`,
+      ].join('\n\n'),
     },
   ]
 }
@@ -78,11 +125,13 @@ export function ThoughtLeadership({
   targetTitles?: string | string[]
   targetCompanies?: string[]
 }) {
-  const titles = Array.isArray(targetTitles)
-    ? targetTitles.flatMap((t) => t.split(',').map((s) => s.trim())).filter(Boolean)
-    : targetTitles
-    ? targetTitles.split(',').map((t) => t.trim()).filter(Boolean)
-    : ['Product Manager']
+  // Titles are stored as comma-separated e.g. "Senior PM, Group PM, Principal PM"
+  // Split on ", " (comma + space) to avoid breaking role names like "AI Enablement, Platform"
+  // that the user may have typed as a single role with a sub-team.
+  const rawTitles = Array.isArray(targetTitles)
+    ? targetTitles.join(', ')
+    : targetTitles ?? 'Product Manager'
+  const titles = rawTitles.split(/,\s+/).map((t) => t.trim()).filter(Boolean)
 
   const companies = targetCompanies?.length ? targetCompanies : ['top tech companies']
 
