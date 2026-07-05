@@ -26,6 +26,13 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { updateMatchStatus, regenerateMatches, saveCoverLetter, type MatchDoc } from "@/lib/actions"
 
+const statusStyles: Record<MatchDoc["status"], string> = {
+  "New":        "bg-primary/10 text-primary",
+  "Reviewing":  "bg-warning/15 text-warning",
+  "Applied":    "bg-success/15 text-success",
+  "Archived":   "bg-muted text-muted-foreground",
+}
+
 interface MatchesProps {
   initialMatches: MatchDoc[]
   initialSelectedMatchId?: string
