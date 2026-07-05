@@ -1,7 +1,7 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { toast } from 'sonner'
+import { useState, useTransition } from "react"
+import { toast } from "sonner"
 import {
   Target,
   Ban,
@@ -13,28 +13,40 @@ import {
   X,
   UploadCloud,
   Briefcase,
-} from 'lucide-react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+} from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Field, FieldGroup, FieldLabel, FieldDescription } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import { Slider } from '@/components/ui/slider'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { cn } from '@/lib/utils'
+} from "@/components/ui/card"
+import {
+  Field,
+  FieldGroup,
+  FieldLabel,
+  FieldDescription,
+} from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
+import { Slider } from "@/components/ui/slider"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
+import { saveDirectives, type DirectivesDoc } from "@/lib/actions"
 
-export function Directives() {
+interface DirectivesProps {
+  initialDirectives: DirectivesDoc | null
+}
+
+export function Directives({ initialDirectives }: DirectivesProps) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">Directives &amp; Criteria</h1>
+        <h1 className="text-xl font-semibold text-foreground">
+          Directives &amp; Criteria
+        </h1>
         <p className="text-sm text-muted-foreground">
           Tell your Chief of Staff exactly what to look for and what to avoid.
         </p>
@@ -57,27 +69,66 @@ export function Directives() {
         </TabsList>
 
         <TabsContent value="targets">
-          <JobTargetsTab />
+          <JobTargetsTab initialDirectives={initialDirectives} />
         </TabsContent>
         <TabsContent value="dealbreakers">
-          <DealbreakersTab />
+          <DealbreakersTab initialDirectives={initialDirectives} />
         </TabsContent>
         <TabsContent value="resume">
-          <ResumeTab />
+          <ResumeTab initialDirectives={initialDirectives} />
         </TabsContent>
       </Tabs>
     </div>
   )
 }
 
-function JobTargetsTab() {
-  const [salary, setSalary] = useState<number[]>([190, 270])
+function JobTargetsTab({
+  initialDirectives,
+}: {
+  initialDirectives: DirectivesDoc | null
+}) {
+  const [salary, setSalary] = useState<number[]>([
+    initialDirectives?.salaryMin ?? 190,
+    initialDirectives?.salaryMax ?? 270,
+  ])
+  const [titles, setTitles] = useState(
+    initialDirectives?.titles.join(", ") ??
+      "Senior Product Manager, Group PM, Principal PM"
+  )
+  const [locations, setLocations] = useState(
+    initialDirectives?.locations.join(", ") ??
+      "Remote (US), New York, San Francisco"
+  )
+  const [isPending, startTransition] = useTransition()
+
+  const save = () => {
+    startTransition(async () => {
+      try {
+        await saveDirectives({
+          titles: titles.split(",").map((s) => s.trim()).filter(Boolean),
+          locations: locations.split(",").map((s) => s.trim()).filter(Boolean),
+          salaryMin: salary[0],
+          salaryMax: salary[1],
+          remoteOnly: false,
+          dreamCompanies: initialDirectives?.dreamCompanies ?? [],
+          dealbreakers: initialDirectives?.dealbreakers ?? [],
+          resumeText: initialDirectives?.resumeText ?? "",
+          linkedinUrl: initialDirectives?.linkedinUrl ?? "",
+        })
+        toast.success("Job targets saved")
+      } catch {
+        toast.error("Failed to save — check your MongoDB connection")
+      }
+    })
+  }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Job Targets</CardTitle>
-        <CardDescription>Define the roles worth your Chief of Staff&apos;s attention.</CardDescription>
+        <CardDescription>
+          Define the roles worth your Chief of Staff&apos;s attention.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <FieldGroup>
@@ -85,7 +136,8 @@ function JobTargetsTab() {
             <FieldLabel htmlFor="titles">Target job titles</FieldLabel>
             <Input
               id="titles"
-              defaultValue="Senior Product Manager, Group PM, Principal PM"
+              value={titles}
+              onChange={(e) => setTitles(e.target.value)}
             />
             <FieldDescription>Separate multiple titles with commas.</FieldDescription>
           </Field>
@@ -125,14 +177,17 @@ function JobTargetsTab() {
               <Input
                 id="location"
                 className="pl-9"
-                defaultValue="Remote (US), New York, San Francisco"
+                value={locations}
+                onChange={(e) => setLocations(e.target.value)}
               />
             </div>
             <FieldDescription>Add cities or &quot;Remote&quot; regions.</FieldDescription>
           </Field>
 
           <Field orientation="horizontal">
-            <Button onClick={() => toast.success('Job targets saved')}>Save targets</Button>
+            <Button onClick={save} disabled={isPending}>
+              {isPending ? "Saving..." : "Save targets"}
+            </Button>
             <Button variant="ghost" className="text-muted-foreground">
               Reset
             </Button>
@@ -143,67 +198,109 @@ function JobTargetsTab() {
   )
 }
 
-function DealbreakersTab() {
-  const [dream, setDream] = useState<string[]>([
-    'Linear',
-    'Vercel',
-    'Stripe',
-    'Notion',
-    'Figma',
-  ])
-  const [anti, setAnti] = useState<string[]>([
-    'Exclude Fintech',
-    'No strict RTO',
-    'No pre-seed startups',
-  ])
+function DealbreakersTab({
+  initialDirectives,
+}: {
+  initialDirectives: DirectivesDoc | null
+}) {
+  const [dream, setDream] = useState<string[]>(
+    initialDirectives?.dreamCompanies ?? [
+      "Linear",
+      "Vercel",
+      "Stripe",
+      "Notion",
+      "Figma",
+    ]
+  )
+  const [anti, setAnti] = useState<string[]>(
+    initialDirectives?.dealbreakers ?? [
+      "Exclude Fintech",
+      "No strict RTO",
+      "No pre-seed startups",
+    ]
+  )
+  const [isPending, startTransition] = useTransition()
+
+  const save = () => {
+    startTransition(async () => {
+      try {
+        await saveDirectives({
+          titles: initialDirectives?.titles ?? [],
+          locations: initialDirectives?.locations ?? [],
+          salaryMin: initialDirectives?.salaryMin ?? 190,
+          salaryMax: initialDirectives?.salaryMax ?? 270,
+          remoteOnly: initialDirectives?.remoteOnly ?? false,
+          dreamCompanies: dream,
+          dealbreakers: anti,
+          resumeText: initialDirectives?.resumeText ?? "",
+          linkedinUrl: initialDirectives?.linkedinUrl ?? "",
+        })
+        toast.success("Dealbreakers saved")
+      } catch {
+        toast.error("Failed to save — check your MongoDB connection")
+      }
+    })
+  }
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-              <Building2 className="size-4" />
-            </span>
-            <div>
-              <CardTitle className="text-base">Dream Companies</CardTitle>
-              <CardDescription>Your Networking Agent prioritizes these.</CardDescription>
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                <Building2 className="size-4" />
+              </span>
+              <div>
+                <CardTitle className="text-base">Dream Companies</CardTitle>
+                <CardDescription>
+                  Your Networking Agent prioritizes these.
+                </CardDescription>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <TagInput
-            tags={dream}
-            onChange={setDream}
-            placeholder="Add a company..."
-            tone="primary"
-            icon={Briefcase}
-          />
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            <TagInput
+              tags={dream}
+              onChange={setDream}
+              placeholder="Add a company..."
+              tone="primary"
+              icon={Briefcase}
+            />
+          </CardContent>
+        </Card>
 
-      <Card className="border-destructive/30">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
-              <Ban className="size-4" />
-            </span>
-            <div>
-              <CardTitle className="text-base">Anti-List / Dealbreakers</CardTitle>
-              <CardDescription>Any match tripping these is auto-rejected.</CardDescription>
+        <Card className="border-destructive/30">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <span className="flex size-8 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+                <Ban className="size-4" />
+              </span>
+              <div>
+                <CardTitle className="text-base">Anti-List / Dealbreakers</CardTitle>
+                <CardDescription>
+                  Any match tripping these is auto-rejected.
+                </CardDescription>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <TagInput
-            tags={anti}
-            onChange={setAnti}
-            placeholder="Add a dealbreaker..."
-            tone="destructive"
-            icon={X}
-          />
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent>
+            <TagInput
+              tags={anti}
+              onChange={setAnti}
+              placeholder="Add a dealbreaker..."
+              tone="destructive"
+              icon={X}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex gap-2">
+        <Button onClick={save} disabled={isPending}>
+          {isPending ? "Saving..." : "Save dealbreakers"}
+        </Button>
+      </div>
     </div>
   )
 }
@@ -218,19 +315,19 @@ function TagInput({
   tags: string[]
   onChange: (tags: string[]) => void
   placeholder: string
-  tone: 'primary' | 'destructive'
+  tone: "primary" | "destructive"
   icon: typeof X
 }) {
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState("")
 
   const add = () => {
     const v = value.trim()
     if (!v || tags.includes(v)) {
-      setValue('')
+      setValue("")
       return
     }
     onChange([...tags, v])
-    setValue('')
+    setValue("")
   }
 
   return (
@@ -240,7 +337,7 @@ function TagInput({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+            if (e.key === "Enter" && !e.nativeEvent.isComposing) {
               e.preventDefault()
               add()
             }
@@ -250,7 +347,7 @@ function TagInput({
         <Button
           type="button"
           size="icon"
-          variant={tone === 'destructive' ? 'outline' : 'default'}
+          variant={tone === "destructive" ? "outline" : "default"}
           onClick={add}
           aria-label="Add"
         >
@@ -265,10 +362,10 @@ function TagInput({
           <span
             key={tag}
             className={cn(
-              'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium',
-              tone === 'destructive'
-                ? 'border-destructive/30 bg-destructive/10 text-destructive'
-                : 'border-primary/30 bg-primary/10 text-primary',
+              "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium",
+              tone === "destructive"
+                ? "border-destructive/30 bg-destructive/10 text-destructive"
+                : "border-primary/30 bg-primary/10 text-primary"
             )}
           >
             <Icon className="size-3" />
@@ -288,8 +385,39 @@ function TagInput({
   )
 }
 
-function ResumeTab() {
-  const [fileName, setFileName] = useState<string | null>('alex-rivera-resume-2026.pdf')
+function ResumeTab({
+  initialDirectives,
+}: {
+  initialDirectives: DirectivesDoc | null
+}) {
+  const [fileName, setFileName] = useState<string | null>(
+    "alex-rivera-resume-2026.pdf"
+  )
+  const [linkedin, setLinkedin] = useState(
+    initialDirectives?.linkedinUrl ?? "linkedin.com/in/alexrivera"
+  )
+  const [isPending, startTransition] = useTransition()
+
+  const save = () => {
+    startTransition(async () => {
+      try {
+        await saveDirectives({
+          titles: initialDirectives?.titles ?? [],
+          locations: initialDirectives?.locations ?? [],
+          salaryMin: initialDirectives?.salaryMin ?? 190,
+          salaryMax: initialDirectives?.salaryMax ?? 270,
+          remoteOnly: initialDirectives?.remoteOnly ?? false,
+          dreamCompanies: initialDirectives?.dreamCompanies ?? [],
+          dealbreakers: initialDirectives?.dealbreakers ?? [],
+          resumeText: initialDirectives?.resumeText ?? "",
+          linkedinUrl: linkedin,
+        })
+        toast.success("Profile saved")
+      } catch {
+        toast.error("Failed to save — check your MongoDB connection")
+      }
+    })
+  }
 
   return (
     <Card>
@@ -313,7 +441,9 @@ function ResumeTab() {
               <span className="text-sm font-medium text-foreground">
                 Drag &amp; drop your resume, or click to browse
               </span>
-              <span className="text-xs text-muted-foreground">PDF or DOCX, up to 10MB</span>
+              <span className="text-xs text-muted-foreground">
+                PDF or DOCX, up to 10MB
+              </span>
               <input
                 id="resume-upload"
                 type="file"
@@ -323,7 +453,7 @@ function ResumeTab() {
                   const f = e.target.files?.[0]
                   if (f) {
                     setFileName(f.name)
-                    toast.success('Resume uploaded', { description: f.name })
+                    toast.success("Resume uploaded", { description: f.name })
                   }
                 }}
               />
@@ -353,20 +483,19 @@ function ResumeTab() {
             <FieldLabel htmlFor="linkedin">LinkedIn profile</FieldLabel>
             <div className="relative">
               <Link2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input id="linkedin" className="pl-9" defaultValue="linkedin.com/in/alexrivera" />
-            </div>
-          </Field>
-
-          <Field>
-            <FieldLabel htmlFor="portfolio">Portfolio / website</FieldLabel>
-            <div className="relative">
-              <Link2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input id="portfolio" className="pl-9" defaultValue="alexrivera.dev" />
+              <Input
+                id="linkedin"
+                className="pl-9"
+                value={linkedin}
+                onChange={(e) => setLinkedin(e.target.value)}
+              />
             </div>
           </Field>
 
           <Field orientation="horizontal">
-            <Button onClick={() => toast.success('Profile saved')}>Save profile</Button>
+            <Button onClick={save} disabled={isPending}>
+              {isPending ? "Saving..." : "Save profile"}
+            </Button>
           </Field>
         </FieldGroup>
       </CardContent>
