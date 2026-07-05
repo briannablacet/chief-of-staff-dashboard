@@ -277,26 +277,23 @@ function MatchDetail({
           </span>
         </div>
 
-      </Card>
-
-      {/* Apply row — outside the hero card for breathing room */}
-      <div className="flex flex-wrap items-center gap-3 px-1">
-        <Button asChild size="lg">
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
           <a
             href={match.jobUrl ?? `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(match.role)}&company=${encodeURIComponent(match.company)}&f_TPR=r604800`}
             target="_blank"
             rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            <ExternalLink data-icon="inline-start" />
+            <ExternalLink className="size-4" />
             Find &amp; apply on LinkedIn
           </a>
-        </Button>
-        <p className="text-sm text-muted-foreground">
-          {match.jobUrl
-            ? "Opens the job listing directly."
-            : `Searches LinkedIn for "${match.role}" at ${match.company}. Direct links will be added by the scraper agent.`}
-        </p>
-      </div>
+          <p className="text-sm text-muted-foreground">
+            {match.jobUrl
+              ? "Opens the job listing directly."
+              : `Searches LinkedIn for this role at ${match.company}. Direct links will be added by the scraper agent.`}
+          </p>
+        </div>
+      </Card>
 
       {/* Job req content */}
       {match.jobReqContent && (
