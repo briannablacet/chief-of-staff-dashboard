@@ -200,19 +200,12 @@ function MatchDetail({
   if (editingLetter) {
     return (
       <div className="flex flex-col gap-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => setEditingLetter(false)} className="-ml-2">
             <ChevronLeft data-icon="inline-start" />
             Back to match
           </Button>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">{match.role} at {match.company}</span>
-            {savingLetter && <span className="text-xs text-muted-foreground">Saving...</span>}
-            <Button size="sm" variant="outline" onClick={copyLetter}>
-              {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-              {copied ? "Copied" : "Copy"}
-            </Button>
-          </div>
+          <span className="text-sm text-muted-foreground">{match.role} at {match.company}</span>
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -224,7 +217,19 @@ function MatchDetail({
             className="min-h-[520px] resize-y text-sm leading-relaxed"
             placeholder="Your cover letter will appear here..."
           />
-          <p className="text-right text-xs text-muted-foreground tabular-nums">{coverLetter.length} characters</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground tabular-nums">{coverLetter.length} characters</p>
+            {savingLetter && <span className="text-xs text-muted-foreground">Saving...</span>}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button onClick={handleLetterBlur} disabled={savingLetter || coverLetter === match.coverLetter}>
+              {savingLetter ? "Saving..." : "Save changes"}
+            </Button>
+            <Button variant="outline" onClick={copyLetter}>
+              {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+              {copied ? "Copied" : "Copy to clipboard"}
+            </Button>
+          </div>
         </div>
       </div>
     )

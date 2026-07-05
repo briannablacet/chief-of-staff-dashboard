@@ -193,23 +193,12 @@ function PostEditor({
   return (
     <div className="flex flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft data-icon="inline-start" />
           All post ideas
         </Button>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-muted-foreground">{idea.topic}</Badge>
-          {isDirty && (
-            <Button size="sm" onClick={handleSave}>
-              Save changes
-            </Button>
-          )}
-          <Button size="sm" variant="outline" onClick={handleCopy}>
-            {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-            {copied ? 'Copied' : 'Copy to clipboard'}
-          </Button>
-        </div>
+        <Badge variant="outline" className="text-muted-foreground">{idea.topic}</Badge>
       </div>
 
       {/* Hook line */}
@@ -236,6 +225,15 @@ function PostEditor({
           className="min-h-96 resize-y text-sm leading-relaxed"
           placeholder="Your full post..."
         />
+        <div className="flex gap-2 pt-1">
+          <Button onClick={handleSave} disabled={!isDirty}>
+            Save changes
+          </Button>
+          <Button variant="outline" onClick={handleCopy}>
+            {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+            {copied ? 'Copied' : 'Copy to clipboard'}
+          </Button>
+        </div>
       </div>
 
       {/* Tips */}
