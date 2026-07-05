@@ -76,14 +76,29 @@ export function Resumes({ initialDirectives }: ResumesProps) {
   const save = (updated: ResumeEntry[]) => {
     startTransition(async () => {
       try {
+        const defaultEntry = updated.find((r) => r.isDefault) ?? updated[0]
         await saveDirectives({
-          ...d,
+          name: d?.name ?? "",
+          headline: d?.headline ?? "",
+          titles: d?.titles ?? [],
+          locations: d?.locations ?? [],
+          salaryMin: d?.salaryMin ?? 0,
+          salaryMax: d?.salaryMax ?? 0,
+          remoteOnly: d?.remoteOnly ?? false,
+          dreamCompanies: d?.dreamCompanies ?? [],
+          dealbreakers: d?.dealbreakers ?? [],
+          linkedinUrl: d?.linkedinUrl ?? "",
+          defaultCoverLetter: d?.defaultCoverLetter ?? "",
+          dailyMatchLimit: d?.dailyMatchLimit ?? 10,
+          dailyCoverLetterLimit: d?.dailyCoverLetterLimit ?? 5,
+          minMatchScore: d?.minMatchScore ?? 70,
+          resumeText: defaultEntry?.text ?? d?.resumeText ?? "",
+          resumeFileName: defaultEntry?.fileName ?? d?.resumeFileName ?? "",
           resumes: updated,
-          resumeText: updated.find((r) => r.isDefault)?.text ?? d?.resumeText ?? "",
-          resumeFileName: updated.find((r) => r.isDefault)?.fileName ?? d?.resumeFileName ?? "",
-        } as DirectivesDoc)
+        })
         toast.success("Résumés saved")
-      } catch {
+      } catch (err) {
+        console.error("[v0] save résumés failed:", err)
         toast.error("Failed to save résumés")
       }
     })

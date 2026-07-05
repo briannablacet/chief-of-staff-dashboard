@@ -105,11 +105,13 @@ export async function saveDirectives(
   data: Omit<DirectivesDoc, "_id" | "userId" | "updatedAt">
 ): Promise<void> {
   const db = await getDb()
+  // Destructure out _id in case the caller accidentally passed it through
+  const { _id, ...safeData } = data as DirectivesDoc
   await db.collection<DirectivesDoc>("directives").updateOne(
     { userId: USER_ID },
     {
       $set: {
-        ...data,
+        ...safeData,
         userId: USER_ID,
         updatedAt: new Date(),
       },
