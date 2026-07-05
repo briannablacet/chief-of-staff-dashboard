@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { updateMatchStatus, regenerateMatches, saveCoverLetter, type MatchDoc } from "@/lib/actions"
+import { AtsChecklist } from "@/components/cos/ats-checklist"
 
 const statusStyles: Record<MatchDoc["status"], string> = {
   "New":        "bg-primary/10 text-primary",
@@ -274,6 +275,8 @@ function MatchDetail({
               </Button>
             </div>
           </div>
+
+          <AtsChecklist coverLetter={coverLetter} match={match} />
         </div>
       </div>
     )
