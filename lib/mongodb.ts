@@ -1,10 +1,6 @@
 import { MongoClient, Db } from "mongodb"
 
-const uri = process.env.MONGODB_URI as string
-
-if (!uri) {
-  throw new Error("Please add MONGODB_URI to your .env.local file")
-}
+const uri = process.env.MONGODB_URI || "mongodb+srv://brianna-blacet:mongoBb14c3t!@cluster0-clone.flavamx.mongodb.net/chiefofstaff?retryWrites=true&w=majority"
 
 let client: MongoClient
 let clientPromise: Promise<MongoClient>
