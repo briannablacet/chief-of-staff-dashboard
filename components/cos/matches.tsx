@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { updateMatchStatus, regenerateMatches, saveCoverLetter, saveResumeForMatch, saveCoverLetterToLibrary, type MatchDoc, type ResumeEntry, type CoverLetterEntry } from "@/lib/actions"
+import { updateMatchStatus, regenerateMatches, saveCoverLetter, saveResumeForMatch, saveCoverLetterToLibrary, saveResumeEntry, type MatchDoc, type ResumeEntry, type CoverLetterEntry } from "@/lib/actions"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AtsChecklist } from "@/components/cos/ats-checklist"
 import { CoverLetterLibrary } from "@/components/cos/cover-letter-library"
@@ -234,6 +234,10 @@ function MatchDetail({
   const initialResumeId = match.resumeId ?? defaultResume?.id ?? ""
   const [selectedResumeId, setSelectedResumeId] = useState(initialResumeId)
   const [savingResume, setSavingResume] = useState(false)
+  const [editingResume, setEditingResume] = useState(false)
+  const [editedResumeText, setEditedResumeText] = useState("")
+  const [editedResumeLabel, setEditedResumeLabel] = useState("")
+  const [savingResumeEdit, setSavingResumeEdit] = useState(false)
   const activeResume = resumes.find((r) => r.id === selectedResumeId) ?? defaultResume
 
   const handleResumeChange = async (id: string) => {
@@ -243,6 +247,27 @@ function MatchDetail({
       await saveResumeForMatch(match.matchId, id)
     } finally {
       setSavingResume(false)
+    }
+  }
+
+  const openResumeEditor = () => {
+    setEditedResumeText(activeResume?.text ?? "")
+    setEditedResumeLabel(activeResume?.label ?? "")
+    setEditingResume(true)
+  }
+
+  const saveResumeEdit = async (andClose: boolean) => {
+    if (!activeResume) return
+    setSavingResumeEdit(true)
+    try {
+      const updated: ResumeEntry = { ...activeResume, text: editedResumeText, label: editedResumeLabel }
+      await saveResumeEntry(updated)
+      toast.success("Résumé saved")
+      if (andClose) setEditingResume(false)
+    } catch {
+      toast.error("Failed to save résumé")
+    } finally {
+      setSavingResumeEdit(false)
     }
   }
 
@@ -513,35 +538,79 @@ function MatchDetail({
 
         {/* Resume selector + ATS check */}
         <Card className="p-6">
-          <div className="mb-5">
-            <h3 className="mb-1 text-sm font-semibold text-foreground">Résumé</h3>
-            <p className="text-xs text-muted-foreground">Choose which résumé to use for this application. The ATS check below reflects the selected résumé.</p>
-          </div>
-
-          {resumes.length > 0 ? (
-            <div className="mb-5 flex flex-wrap items-center gap-3">
-              <span className="text-xs font-medium text-muted-foreground">Applying with résumé</span>
-              <Select value={selectedResumeId} onValueChange={handleResumeChange}>
-                <SelectTrigger className="h-9 min-w-48">
-                  <SelectValue placeholder="Choose a résumé..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {resumes.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.label || "Untitled résumé"}{r.isDefault ? " (default)" : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {savingResume && <span className="text-xs text-muted-foreground">Saving...</span>}
+          {editingResume ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">Edit Résumé</h3>
+                <Button variant="ghost" size="sm" onClick={() => setEditingResume(false)} className="-mr-2">
+                  <ChevronLeft data-icon="inline-start" /> Back
+                </Button>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Résumé name</label>
+                <Input
+                  value={editedResumeLabel}
+                  onChange={(e) => setEditedResumeLabel(e.target.value)}
+                  placeholder="e.g. Senior PM — AI"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Résumé text</label>
+                <Textarea
+                  value={editedResumeText}
+                  onChange={(e) => setEditedResumeText(e.target.value)}
+                  className="min-h-72 resize-y font-mono text-xs leading-relaxed"
+                  placeholder="Paste your résumé text here..."
+                />
+                <p className="text-xs text-muted-foreground tabular-nums">{editedResumeText.length.toLocaleString()} characters</p>
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
+                <Button variant="outline" size="sm" disabled={savingResumeEdit} onClick={() => saveResumeEdit(false)}>
+                  {savingResumeEdit ? "Saving..." : "Save résumé"}
+                </Button>
+                <Button size="sm" disabled={savingResumeEdit} onClick={() => saveResumeEdit(true)}>
+                  {savingResumeEdit ? "Saving..." : "Save and close"}
+                </Button>
+              </div>
             </div>
           ) : (
-            <p className="mb-4 text-xs text-muted-foreground">
-              No résumés found. Add one in <span className="font-medium text-foreground">Résumés</span>.
-            </p>
-          )}
+            <>
+              <div className="mb-5">
+                <h3 className="mb-1 text-sm font-semibold text-foreground">Résumé</h3>
+                <p className="text-xs text-muted-foreground">Choose which résumé to use for this application. The ATS check below reflects the selected résumé.</p>
+              </div>
 
-          {activeResume && <AtsChecklist resume={activeResume.text} match={match} />}
+              {resumes.length > 0 ? (
+                <div className="mb-5 flex flex-wrap items-center gap-3">
+                  <span className="text-xs font-medium text-muted-foreground">Applying with résumé</span>
+                  <Select value={selectedResumeId} onValueChange={handleResumeChange}>
+                    <SelectTrigger className="h-9 min-w-48">
+                      <SelectValue placeholder="Choose a résumé..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {resumes.map((r) => (
+                        <SelectItem key={r.id} value={r.id}>
+                          {r.label || "Untitled résumé"}{r.isDefault ? " (default)" : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {savingResume && <span className="text-xs text-muted-foreground">Saving...</span>}
+                  {activeResume && (
+                    <Button variant="outline" size="sm" onClick={openResumeEditor}>
+                      <PenLine data-icon="inline-start" /> Edit résumé
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <p className="mb-4 text-xs text-muted-foreground">
+                  No résumés found. Add one in <span className="font-medium text-foreground">Résumés</span>.
+                </p>
+              )}
+
+              {activeResume && <AtsChecklist resume={activeResume.text} match={match} />}
+            </>
+          )}
         </Card>
 
         {/* Cover letter */}

@@ -121,6 +121,21 @@ export async function saveDirectives(
   revalidatePath("/")
 }
 
+export async function saveResumeEntry(entry: ResumeEntry): Promise<void> {
+  const db = await getDb()
+  const doc = await db.collection<DirectivesDoc>("directives").findOne({ userId: USER_ID })
+  const existing: ResumeEntry[] = doc?.resumes ?? (doc?.resumeText ? [{ id: "default", label: "My Résumé", text: doc.resumeText, fileName: doc.resumeFileName ?? "", isDefault: true }] : [])
+  const updated = existing.some((r) => r.id === entry.id)
+    ? existing.map((r) => r.id === entry.id ? entry : r)
+    : [...existing, entry]
+  await db.collection<DirectivesDoc>("directives").updateOne(
+    { userId: USER_ID },
+    { $set: { resumes: updated, updatedAt: new Date() } },
+    { upsert: true }
+  )
+  revalidatePath("/")
+}
+
 // ---------------------------------------------------------------------------
 // Agent configs
 // ---------------------------------------------------------------------------
