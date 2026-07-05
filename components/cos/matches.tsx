@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useRef, useEffect, useCallback } from "react"
+import { useState, useTransition } from "react"
 import { toast } from "sonner"
 import {
   CheckCircle2,
@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -188,33 +189,7 @@ function MatchDetail({
   const [coverLetter, setCoverLetter] = useState(match.coverLetter ?? "")
   const [savingLetter, setSavingLetter] = useState(false)
   const [editingLetter, setEditingLetter] = useState(false)
-  const editorRef = useRef<HTMLDivElement>(null)
-
-  // Populate the contentEditable with paragraph elements when entering edit mode
-  useEffect(() => {
-    if (editingLetter && editorRef.current) {
-      // Force browser to use <p> on Enter, not <div>
-      document.execCommand('defaultParagraphSeparator', false, 'p')
-      editorRef.current.innerHTML = coverLetter
-        .split(/\n\n+/)
-        .map((p) => `<p style="margin:0 0 1.75em 0;line-height:1.7">${p.replace(/\n/g, "<br>") || "<br>"}</p>`)
-        .join("")
-    }
-  }, [editingLetter]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Read the contentEditable back to plain text (paragraphs separated by \n\n)
-  const syncFromEditor = useCallback(() => {
-    if (!editorRef.current) return
-    const paragraphs = Array.from(editorRef.current.querySelectorAll("p"))
-    if (paragraphs.length === 0) {
-      setCoverLetter(editorRef.current.innerText.trim())
-      return
-    }
-    const text = paragraphs
-      .map((p) => p.innerText.replace(/\n$/, ""))
-      .join("\n\n")
-    setCoverLetter(text)
-  }, [])
+  const [rawEditing, setRawEditing] = useState(false)
 
   const copyLetter = async () => {
     try {
@@ -251,33 +226,52 @@ function MatchDetail({
           <span className="text-sm text-muted-foreground">{match.role} at {match.company}</span>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <div
-            ref={editorRef}
-            contentEditable
-            suppressContentEditableWarning
-            onInput={syncFromEditor}
-            onBlur={() => { syncFromEditor(); handleLetterBlur() }}
-            className={[
-              "min-h-[520px] w-full rounded-md border border-border bg-background px-6 py-6",
-              "text-sm text-foreground outline-none focus:ring-2 focus:ring-ring",
-              "[&_p]:leading-[1.7] [&_p]:mb-[1.75em] [&_p:last-child]:mb-0",
-              "[&_div]:leading-[1.7] [&_div]:mb-[1.75em] [&_div:last-child]:mb-0",
-              "empty:before:text-muted-foreground empty:before:content-['Your_cover_letter_will_appear_here...']",
-            ].join(" ")}
-          />
-          <div className="flex items-center justify-between pt-1">
-            <p className="text-xs text-muted-foreground tabular-nums">{coverLetter.length} characters</p>
-            {savingLetter && <span className="text-xs text-muted-foreground">Saving...</span>}
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={handleLetterBlur} disabled={savingLetter || coverLetter === match.coverLetter}>
-              {savingLetter ? "Saving..." : "Save changes"}
-            </Button>
-            <Button variant="outline" onClick={copyLetter}>
-              {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-              {copied ? "Copied" : "Copy to clipboard"}
-            </Button>
+        <div className="flex flex-col gap-3">
+          {rawEditing ? (
+            /* Plain textarea for editing */
+            <Textarea
+              value={coverLetter}
+              onChange={(e) => setCoverLetter(e.target.value)}
+              className="min-h-[520px] resize-y font-sans text-sm leading-6"
+              placeholder="Your cover letter will appear here..."
+              autoFocus
+            />
+          ) : (
+            /* Rendered view with proper paragraph spacing */
+            <div className="min-h-[520px] cursor-text rounded-md border border-border bg-background px-6 py-6 text-sm text-foreground" onClick={() => setRawEditing(true)}>
+              {coverLetter
+                ? coverLetter.split(/\n\n+/).map((para, i) => (
+                    <p key={i} className="mb-6 leading-6 last:mb-0">
+                      {para.split('\n').map((line, j, arr) => (
+                        <span key={j}>{line}{j < arr.length - 1 && <br />}</span>
+                      ))}
+                    </p>
+                  ))
+                : <span className="text-muted-foreground">Click to edit your cover letter...</span>
+              }
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              {rawEditing ? (
+                <Button size="sm" onClick={() => setRawEditing(false)}>Done editing</Button>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => setRawEditing(true)}>
+                  <PenLine data-icon="inline-start" /> Edit text
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={copyLetter}>
+                {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+                {copied ? "Copied" : "Copy to clipboard"}
+              </Button>
+            </div>
+            <div className="flex items-center gap-3">
+              {savingLetter && <span className="text-xs text-muted-foreground">Saving...</span>}
+              <Button size="sm" onClick={handleLetterBlur} disabled={savingLetter || coverLetter === match.coverLetter}>
+                Save changes
+              </Button>
+            </div>
           </div>
         </div>
       </div>
