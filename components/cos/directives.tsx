@@ -115,7 +115,7 @@ export function Directives({ initialDirectives, defaultTab }: DirectivesProps) {
           </TabsTrigger>
           <TabsTrigger value="dealbreakers">
             <Ban data-icon="inline-start" />
-            Settings
+            {"Settings"}
           </TabsTrigger>
           <TabsTrigger value="resume">
             <FileText data-icon="inline-start" />
