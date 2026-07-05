@@ -110,10 +110,7 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
             <User data-icon="inline-start" />
             Profile
           </TabsTrigger>
-          <TabsTrigger value="resumes">
-            <FileText data-icon="inline-start" />
-            Resumes
-          </TabsTrigger>
+
           <TabsTrigger value="targets">
             <Target data-icon="inline-start" />
             Target Roles
@@ -135,9 +132,7 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
         <TabsContent value="resume">
           <ResumeTab state={state} set={set} buildPayload={buildPayload} />
         </TabsContent>
-        <TabsContent value="resumes">
-          <ResumesTab state={state} set={set} buildPayload={buildPayload} />
-        </TabsContent>
+
         <TabsContent value="targets">
           <JobTargetsTab state={state} set={set} buildPayload={buildPayload} />
         </TabsContent>

@@ -18,6 +18,7 @@ const TITLES: Record<ViewKey, string> = {
   matches: "Matches & Cover Letters",
   "thought-leadership": "Thought Leadership",
   agents: "Agent Setup",
+  resumes: "Resumes",
 }
 
 interface DashboardProps {
@@ -122,6 +123,13 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
           )}
           {view === "matches" && <Matches initialMatches={initialMatches} initialSelectedMatchId={selectedMatchId} onMatchSelected={() => setSelectedMatchId(undefined)} resumes={initialDirectives?.resumes ?? []} />}
           {view === "thought-leadership" && <ThoughtLeadership targetTitles={initialDirectives?.titles} targetCompanies={initialDirectives?.dreamCompanies} />}
+          {view === "resumes" && (
+            <Directives
+              initialDirectives={initialDirectives}
+              initialAgentConfigs={initialAgentConfigs}
+              defaultTab="resumes"
+            />
+          )}
           {view === "agents" && (
             <Directives
               initialDirectives={initialDirectives}
