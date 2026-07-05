@@ -225,27 +225,50 @@ function MatchDetail({
           <span className="text-sm text-muted-foreground">{match.role} at {match.company}</span>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Cover Letter</p>
-          <Textarea
-            value={coverLetter}
-            onChange={(e) => setCoverLetter(e.target.value)}
-            onBlur={handleLetterBlur}
-            className="min-h-[520px] resize-y text-sm leading-relaxed"
-            placeholder="Your cover letter will appear here..."
-          />
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground tabular-nums">{coverLetter.length} characters</p>
-            {savingLetter && <span className="text-xs text-muted-foreground">Saving...</span>}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Edit pane */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Edit</p>
+            <Textarea
+              value={coverLetter}
+              onChange={(e) => setCoverLetter(e.target.value)}
+              onBlur={handleLetterBlur}
+              className="min-h-[520px] resize-y text-sm leading-7"
+              placeholder="Your cover letter will appear here..."
+            />
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground tabular-nums">{coverLetter.length} characters</p>
+              {savingLetter && <span className="text-xs text-muted-foreground">Saving...</span>}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button onClick={handleLetterBlur} disabled={savingLetter || coverLetter === match.coverLetter}>
+                {savingLetter ? "Saving..." : "Save changes"}
+              </Button>
+              <Button variant="outline" onClick={copyLetter}>
+                {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+                {copied ? "Copied" : "Copy to clipboard"}
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2 pt-1">
-            <Button onClick={handleLetterBlur} disabled={savingLetter || coverLetter === match.coverLetter}>
-              {savingLetter ? "Saving..." : "Save changes"}
-            </Button>
-            <Button variant="outline" onClick={copyLetter}>
-              {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-              {copied ? "Copied" : "Copy to clipboard"}
-            </Button>
+
+          {/* Preview pane */}
+          <div className="flex flex-col gap-1.5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
+            <div className="min-h-[520px] rounded-md border border-border bg-background/50 px-4 py-4 text-sm text-foreground">
+              {coverLetter
+                ? coverLetter.split(/\n\n+/).map((para, i) => (
+                    <p key={i} className="mb-5 leading-7 last:mb-0">
+                      {para.split('\n').map((line, j, arr) => (
+                        <span key={j}>
+                          {line}
+                          {j < arr.length - 1 && <br />}
+                        </span>
+                      ))}
+                    </p>
+                  ))
+                : <span className="text-muted-foreground">Start typing to see a preview...</span>
+              }
+            </div>
           </div>
         </div>
       </div>
@@ -391,9 +414,14 @@ function MatchDetail({
         <Card className="flex flex-col gap-0 py-0">
           <div className="flex-1 px-5 pt-5 pb-4">
             <h3 className="mb-3 text-sm font-semibold text-foreground">Cover Letter</h3>
-            <p className="line-clamp-6 whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
-              {coverLetter || "No cover letter generated yet."}
-            </p>
+            <div className="line-clamp-6 text-xs text-muted-foreground">
+              {coverLetter
+                ? coverLetter.split(/\n\n+/).map((para, i) => (
+                    <p key={i} className="mb-3 leading-relaxed last:mb-0">{para.replace(/\n/g, ' ')}</p>
+                  ))
+                : <p className="leading-relaxed">No cover letter generated yet.</p>
+              }
+            </div>
           </div>
           <div className="border-t border-border px-5 py-3">
             <Button size="sm" variant="secondary" className="w-full" onClick={() => setEditingLetter(true)}>
