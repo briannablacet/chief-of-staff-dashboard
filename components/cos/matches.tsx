@@ -1,0 +1,233 @@
+'use client'
+
+import { useState } from 'react'
+import { toast } from 'sonner'
+import {
+  CheckCircle2,
+  XCircle,
+  Copy,
+  Check,
+  ChevronRight,
+  MapPin,
+  Wallet,
+  Send,
+} from 'lucide-react'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from '@/components/ui/sheet'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { archiveMatches, type JobMatch } from '@/lib/cos-data'
+import { cn } from '@/lib/utils'
+
+const statusStyles: Record<JobMatch['status'], string> = {
+  New: 'bg-primary/15 text-primary',
+  Reviewed: 'bg-warning/15 text-warning',
+  Applied: 'bg-success/15 text-success',
+}
+
+export function Matches() {
+  const [selected, setSelected] = useState<JobMatch | null>(null)
+  const open = selected !== null
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Matches &amp; Outreach</h1>
+          <p className="text-sm text-muted-foreground">
+            Every role that cleared your filters. Click any match for the full breakdown.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Badge variant="outline" className="text-muted-foreground">
+            {archiveMatches.length} matches
+          </Badge>
+          <Badge variant="outline" className="text-success">
+            {archiveMatches.filter((m) => m.status === 'Applied').length} applied
+          </Badge>
+        </div>
+      </div>
+
+      <Card className="overflow-hidden py-0">
+        {/* Table header (desktop) */}
+        <div className="hidden grid-cols-[1.6fr_1fr_0.9fr_0.7fr_auto] gap-4 border-b border-border bg-secondary/30 px-5 py-3 text-xs font-medium text-muted-foreground md:grid">
+          <span>Role</span>
+          <span>Location</span>
+          <span>Compensation</span>
+          <span>Match</span>
+          <span className="text-right">Status</span>
+        </div>
+
+        <ul className="divide-y divide-border">
+          {archiveMatches.map((match) => (
+            <li key={match.id}>
+              <button
+                type="button"
+                onClick={() => setSelected(match)}
+                className="grid w-full grid-cols-1 gap-3 px-5 py-4 text-left transition-colors hover:bg-accent/30 md:grid-cols-[1.6fr_1fr_0.9fr_0.7fr_auto] md:items-center md:gap-4"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-xs font-semibold text-secondary-foreground">
+                    {match.company.slice(0, 2)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{match.role}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {match.company} &bull; {match.postedAgo}
+                    </p>
+                  </div>
+                </div>
+                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <MapPin className="size-3.5 md:hidden" />
+                  {match.location}
+                </span>
+                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Wallet className="size-3.5 md:hidden" />
+                  {match.salary}
+                </span>
+                <span>
+                  <span
+                    className={cn(
+                      'inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold tabular-nums',
+                      match.score >= 90
+                        ? 'bg-success/15 text-success'
+                        : match.score >= 85
+                          ? 'bg-primary/15 text-primary'
+                          : 'bg-warning/15 text-warning',
+                    )}
+                  >
+                    {match.score}%
+                  </span>
+                </span>
+                <span className="flex items-center justify-between gap-2 md:justify-end">
+                  <Badge variant="secondary" className={cn('font-medium', statusStyles[match.status])}>
+                    {match.status}
+                  </Badge>
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <Sheet open={open} onOpenChange={(o) => !o && setSelected(null)}>
+        <SheetContent className="w-full gap-0 sm:max-w-lg">
+          {selected && <MatchDetail match={selected} />}
+        </SheetContent>
+      </Sheet>
+    </div>
+  )
+}
+
+function MatchDetail({ match }: { match: JobMatch }) {
+  const [copied, setCopied] = useState(false)
+
+  const copyLetter = async () => {
+    try {
+      await navigator.clipboard.writeText(match.coverLetter)
+      setCopied(true)
+      toast.success('Cover letter copied', { description: `Tailored for ${match.company}.` })
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('Could not copy to clipboard')
+    }
+  }
+
+  return (
+    <>
+      <SheetHeader className="gap-3 border-b border-border">
+        <div className="flex items-center gap-3">
+          <span className="flex size-12 items-center justify-center rounded-xl bg-secondary text-sm font-semibold text-secondary-foreground">
+            {match.company.slice(0, 2)}
+          </span>
+          <div>
+            <SheetTitle className="text-base">{match.role}</SheetTitle>
+            <SheetDescription>
+              {match.company} &bull; {match.location}
+            </SheetDescription>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={cn(
+              'inline-flex items-center rounded-md px-2.5 py-1 text-sm font-semibold tabular-nums',
+              match.score >= 90 ? 'bg-success/15 text-success' : 'bg-primary/15 text-primary',
+            )}
+          >
+            {match.score}% Match
+          </span>
+          <Badge variant="outline" className="text-muted-foreground">
+            {match.workModel}
+          </Badge>
+          <Badge variant="outline" className="text-muted-foreground">
+            {match.salary}
+          </Badge>
+        </div>
+      </SheetHeader>
+
+      <ScrollArea className="flex-1">
+        <div className="flex flex-col gap-6 p-4">
+          <section className="flex flex-col gap-3">
+            <h3 className="text-xs font-medium text-muted-foreground">Score breakdown</h3>
+            <div className="flex flex-col gap-2">
+              {match.breakdown.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-start gap-3 rounded-lg border border-border bg-background/40 p-3"
+                >
+                  {item.met ? (
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                  ) : (
+                    <XCircle className="mt-0.5 size-4 shrink-0 text-warning" />
+                  )}
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-foreground">{item.label}</span>
+                    <span className="text-xs text-muted-foreground">{item.note}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <Separator />
+
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-medium text-muted-foreground">
+                Pre-written cover letter
+              </h3>
+              <Button size="sm" variant="ghost" onClick={copyLetter}>
+                {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+                {copied ? 'Copied' : 'Copy'}
+              </Button>
+            </div>
+            <p className="rounded-lg border border-border bg-background/40 p-4 text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
+              {match.coverLetter}
+            </p>
+          </section>
+        </div>
+      </ScrollArea>
+
+      <SheetFooter className="flex-row gap-2 border-t border-border">
+        <Button className="flex-1" onClick={() => toast.success(`Application queued for ${match.company}`)}>
+          <Send data-icon="inline-start" />
+          Apply with this letter
+        </Button>
+        <Button variant="outline" onClick={copyLetter}>
+          {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+          Copy
+        </Button>
+      </SheetFooter>
+    </>
+  )
+}

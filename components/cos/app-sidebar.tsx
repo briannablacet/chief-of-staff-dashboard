@@ -1,0 +1,101 @@
+'use client'
+
+import {
+  LayoutDashboard,
+  UsersRound,
+  SlidersHorizontal,
+  Inbox,
+  Sparkles,
+  Circle,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+
+export type ViewKey = 'command' | 'staff' | 'directives' | 'matches'
+
+const NAV: { key: ViewKey; label: string; sub: string; icon: typeof Inbox }[] = [
+  { key: 'command', label: 'Command Center', sub: 'Daily digest', icon: LayoutDashboard },
+  { key: 'staff', label: 'Staff Organization', sub: 'Agent profiles', icon: UsersRound },
+  { key: 'directives', label: 'Directives & Criteria', sub: 'Configuration', icon: SlidersHorizontal },
+  { key: 'matches', label: 'Matches & Outreach', sub: 'Output archive', icon: Inbox },
+]
+
+export function AppSidebar({
+  active,
+  onNavigate,
+}: {
+  active: ViewKey
+  onNavigate: (v: ViewKey) => void
+}) {
+  return (
+    <nav
+      aria-label="Primary"
+      className="flex h-full w-full flex-col gap-6 bg-sidebar p-4"
+    >
+      <div className="flex items-center gap-3 px-2 pt-2">
+        <div className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <Sparkles className="size-5" />
+        </div>
+        <div className="leading-tight">
+          <p className="text-sm font-semibold text-sidebar-foreground">Chief of Staff</p>
+          <p className="text-xs text-muted-foreground">Agentic career OS</p>
+        </div>
+      </div>
+
+      <ul className="flex flex-1 flex-col gap-1">
+        {NAV.map((item) => {
+          const Icon = item.icon
+          const isActive = active === item.key
+          return (
+            <li key={item.key}>
+              <button
+                type="button"
+                onClick={() => onNavigate(item.key)}
+                aria-current={isActive ? 'page' : undefined}
+                className={cn(
+                  'group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors',
+                  isActive
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                )}
+              >
+                <Icon
+                  className={cn(
+                    'size-5 shrink-0',
+                    isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-sidebar-foreground',
+                  )}
+                />
+                <span className="flex flex-col">
+                  <span className="text-sm font-medium">{item.label}</span>
+                  <span className="text-xs text-muted-foreground">{item.sub}</span>
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-2.5">
+          <span className="relative flex size-2.5">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />
+            <Circle className="size-2.5 fill-success text-success" />
+          </span>
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium text-sidebar-foreground">4 agents</span> active
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 rounded-lg px-2 py-1">
+          <Avatar className="size-8">
+            <AvatarFallback className="bg-secondary text-xs text-secondary-foreground">AR</AvatarFallback>
+          </Avatar>
+          <div className="leading-tight">
+            <p className="text-sm font-medium text-sidebar-foreground">Alex Rivera</p>
+            <p className="text-xs text-muted-foreground">Senior PM &bull; Job seeking</p>
+          </div>
+        </div>
+      </div>
+    </nav>
+  )
+}
