@@ -136,9 +136,9 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
                   <MapPin className="size-3.5 md:hidden" />
                   {match.location}
                 </span>
-                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Wallet className="size-3.5 md:hidden" />
-                  {match.salary}
+                <span className="flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground">
+                  <Wallet className="size-3.5 shrink-0 md:hidden" />
+                  <span className="truncate">{match.salary}</span>
                 </span>
                 <span>
                   <span
@@ -278,21 +278,22 @@ function MatchDetail({
         </div>
 
         <Separator className="my-4" />
-        <div className="flex items-center gap-3">
-          {match.jobUrl ? (
-            <Button asChild>
-              <a href={match.jobUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink data-icon="inline-start" />
-                Find &amp; apply on LinkedIn
-              </a>
-            </Button>
-          ) : (
-            <Button variant="outline" disabled>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button asChild>
+            <a
+              href={match.jobUrl ?? `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(match.role)}&company=${encodeURIComponent(match.company)}&f_TPR=r604800`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <ExternalLink data-icon="inline-start" />
-              No job link available
-            </Button>
-          )}
-          <p className="text-xs text-muted-foreground">Opens a filtered LinkedIn search for this role at {match.company}. Direct job links will be populated by the scraper agent.</p>
+              Find &amp; apply on LinkedIn
+            </a>
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            {match.jobUrl
+              ? "Opens the job listing directly."
+              : `Opens a LinkedIn search for "${match.role}" at ${match.company}. Direct links will be added by the scraper agent.`}
+          </p>
         </div>
       </Card>
 
