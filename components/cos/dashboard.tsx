@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import type { DirectivesDoc, AgentDoc, MatchDoc } from "@/lib/actions"
 
 const TITLES: Record<ViewKey, string> = {
-  command: "Command Center",
+  command: "Dashboard",
   staff: "Staff Organization",
   directives: "Settings",
   matches: "Matches & Cover Letters",

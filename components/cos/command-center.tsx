@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { agents } from '@/lib/cos-data'
 import type { ViewKey } from './app-sidebar'
 import { cn } from '@/lib/utils'
@@ -48,42 +47,41 @@ export function CommandCenter({ onNavigate, onNavigateToMatch, profileName, init
             Live
           </Badge>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="divide-y divide-border py-0">
           {agents.map((agent) => {
             const Icon = agent.icon
             return (
-              <Card key={agent.key} className="gap-0 py-0">
-                <CardHeader className="flex-row items-center gap-3 px-4 pt-4 pb-3">
-                  <span className="flex size-9 items-center justify-center rounded-lg bg-accent text-primary">
-                    <Icon className="size-4" />
+              <button
+                key={agent.key}
+                type="button"
+                onClick={() => onNavigate('directives')}
+                className="flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-accent/40"
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">
+                  <Icon className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{agent.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{agent.role}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-sm font-semibold tabular-nums text-foreground">{agent.activity}</p>
+                    <p className="text-xs text-muted-foreground">{agent.activityLabel}</p>
+                  </div>
+                  <span className="flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
+                    <span className="relative flex size-1.5">
+                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />
+                      <span className="relative inline-flex size-1.5 rounded-full bg-success" />
+                    </span>
+                    Active
                   </span>
-                  <div className="flex min-w-0 flex-col">
-                    <CardTitle className="truncate text-sm">{agent.name}</CardTitle>
-                    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <span className="relative flex size-2">
-                        <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />
-                        <span className="relative inline-flex size-2 rounded-full bg-success" />
-                      </span>
-                      {agent.role}
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent className="px-4 pb-4">
-                  <p className="line-clamp-2 min-h-9 text-xs leading-relaxed text-muted-foreground">
-                    {agent.currentTask}
-                  </p>
-                  <Separator className="my-3" />
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-xl font-semibold tabular-nums text-foreground">
-                      {agent.activity}
-                    </span>
-                    <span className="text-xs text-muted-foreground">{agent.activityLabel}</span>
-                  </div>
-                </CardContent>
-              </Card>
+                  <ChevronRight className="size-4 text-muted-foreground" />
+                </div>
+              </button>
             )
           })}
-        </div>
+        </Card>
       </section>
 
     </div>
