@@ -7,25 +7,20 @@ import {
   XCircle,
   Copy,
   Check,
+  ChevronLeft,
   ChevronRight,
   MapPin,
   Wallet,
   ExternalLink,
   RefreshCw,
+  Building2,
+  Clock,
+  Briefcase,
 } from "lucide-react"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter,
-} from "@/components/ui/sheet"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { updateMatchStatus, regenerateMatches, saveJobUrl, type MatchDoc } from "@/lib/actions"
 import { cn } from "@/lib/utils"
@@ -67,6 +62,16 @@ export function Matches({ initialMatches }: MatchesProps) {
     } finally {
       setRegenerating(false)
     }
+  }
+
+  if (selected) {
+    return (
+      <MatchDetail
+        match={selected}
+        onStatusChange={handleStatusChange}
+        onBack={() => setSelected(null)}
+      />
+    )
   }
 
   return (
@@ -160,17 +165,6 @@ export function Matches({ initialMatches }: MatchesProps) {
           ))}
         </ul>
       </Card>
-
-      <Sheet
-        open={selected !== null}
-        onOpenChange={(o) => !o && setSelected(null)}
-      >
-        <SheetContent className="w-full gap-0 sm:max-w-lg">
-          {selected && (
-            <MatchDetail match={selected} onStatusChange={handleStatusChange} />
-          )}
-        </SheetContent>
-      </Sheet>
     </div>
   )
 }
@@ -178,9 +172,11 @@ export function Matches({ initialMatches }: MatchesProps) {
 function MatchDetail({
   match,
   onStatusChange,
+  onBack,
 }: {
   match: MatchDoc
   onStatusChange: (matchId: string, status: MatchDoc["status"]) => void
+  onBack: () => void
 }) {
   const [copied, setCopied] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -191,123 +187,100 @@ function MatchDetail({
     try {
       await navigator.clipboard.writeText(match.coverLetter)
       setCopied(true)
-      toast.success("Cover letter copied", {
-        description: `Tailored for ${match.company}.`,
-      })
+      toast.success("Cover letter copied", { description: `Tailored for ${match.company}.` })
       setTimeout(() => setCopied(false), 2000)
     } catch {
       toast.error("Could not copy to clipboard")
     }
   }
 
-  const markReviewed = () => {
-    if (match.status !== "New") return
+  const markApplied = () => {
     startTransition(async () => {
       try {
-        await updateMatchStatus(match.matchId, "Reviewed")
-        onStatusChange(match.matchId, "Reviewed")
+        await updateMatchStatus(match.matchId, "Applied")
+        onStatusChange(match.matchId, "Applied")
+        toast.success(`Marked as Applied for ${match.company}`)
       } catch {
-        // non-critical, ignore silently
+        toast.error("Failed to update status")
       }
     })
   }
 
-  // Mark as Reviewed when the panel is opened and status is New
-  useState(() => {
-    if (match.status === "New") markReviewed()
-  })
-
   return (
-    <>
-      <SheetHeader className="gap-3 border-b border-border">
-        <div className="flex items-center gap-3">
-          <span className="flex size-12 items-center justify-center rounded-xl bg-secondary text-sm font-semibold text-secondary-foreground">
-            {match.company.slice(0, 2)}
-          </span>
-          <div>
-            <SheetTitle className="text-base">{match.role}</SheetTitle>
-            <SheetDescription>
-              {match.company} &bull; {match.location}
-            </SheetDescription>
-          </div>
+    <div className="flex flex-col gap-6">
+      {/* Back button + title bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 text-muted-foreground">
+          <ChevronLeft data-icon="inline-start" />
+          All Matches
+        </Button>
+        <div className="flex items-center gap-2">
+          <Badge
+            variant="secondary"
+            className={cn("font-medium", statusStyles[match.status])}
+          >
+            {match.status}
+          </Badge>
+          {match.status !== "Applied" && (
+            <Button size="sm" variant="outline" onClick={markApplied} disabled={isPending}>
+              Mark as Applied
+            </Button>
+          )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+      </div>
+
+      {/* Hero card */}
+      <Card className="p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-4">
+            <span className="flex size-16 shrink-0 items-center justify-center rounded-xl bg-secondary text-lg font-bold text-secondary-foreground">
+              {match.company.slice(0, 2)}
+            </span>
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xl font-semibold text-foreground">{match.role}</h2>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Building2 className="size-3.5" />
+                  {match.company}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="size-3.5" />
+                  {match.location}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Wallet className="size-3.5" />
+                  {match.salary}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Briefcase className="size-3.5" />
+                  {match.workModel}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Clock className="size-3.5" />
+                  {match.postedAgo}
+                </span>
+              </div>
+            </div>
+          </div>
           <span
             className={cn(
-              "inline-flex items-center rounded-md px-2.5 py-1 text-sm font-semibold tabular-nums",
+              "inline-flex shrink-0 items-center rounded-xl px-4 py-2 text-2xl font-bold tabular-nums",
               match.score >= 90
                 ? "bg-success/15 text-success"
-                : "bg-primary/15 text-primary"
+                : match.score >= 85
+                  ? "bg-primary/15 text-primary"
+                  : "bg-warning/15 text-warning"
             )}
           >
-            {match.score}% Match
+            {match.score}%
           </span>
-          <Badge variant="outline" className="text-muted-foreground">
-            {match.workModel}
-          </Badge>
-          <Badge variant="outline" className="text-muted-foreground">
-            {match.salary}
-          </Badge>
         </div>
-      </SheetHeader>
 
-      <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-6 p-4">
-          <section className="flex flex-col gap-3">
-            <h3 className="text-xs font-medium text-muted-foreground">
-              Score breakdown
-            </h3>
-            <div className="flex flex-col gap-2">
-              {match.breakdown.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-start gap-3 rounded-lg border border-border bg-background/40 p-3"
-                >
-                  {item.met ? (
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-                  ) : (
-                    <XCircle className="mt-0.5 size-4 shrink-0 text-warning" />
-                  )}
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-foreground">
-                      {item.label}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {item.note}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <Separator />
-
-          <section className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-medium text-muted-foreground">
-                Pre-written cover letter
-              </h3>
-              <Button size="sm" variant="ghost" onClick={copyLetter}>
-                {copied ? (
-                  <Check data-icon="inline-start" />
-                ) : (
-                  <Copy data-icon="inline-start" />
-                )}
-                {copied ? "Copied" : "Copy"}
-              </Button>
-            </div>
-            <p className="rounded-lg border border-border bg-background/40 p-4 text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
-              {match.coverLetter}
-            </p>
-          </section>
-        </div>
-      </ScrollArea>
-
-      <SheetFooter className="flex-col gap-3 border-t border-border">
-        <div className="flex w-full items-center gap-2">
+        {/* Job URL row */}
+        <Separator className="my-4" />
+        <div className="flex items-center gap-2">
           <Input
-            placeholder="Paste job listing URL..."
+            placeholder="Paste job listing URL to enable Apply button..."
             value={jobUrl}
             onChange={(e) => setJobUrl(e.target.value)}
             className="flex-1 text-sm"
@@ -328,11 +301,9 @@ function MatchDetail({
               }
             }}
           >
-            {savingUrl ? "Saving..." : "Save"}
+            {savingUrl ? "Saving..." : "Save URL"}
           </Button>
-        </div>
-        <div className="flex w-full gap-2">
-          <Button className="flex-1" asChild disabled={!jobUrl}>
+          <Button asChild disabled={!jobUrl}>
             <a
               href={jobUrl || "#"}
               target="_blank"
@@ -343,16 +314,48 @@ function MatchDetail({
               Apply for this role
             </a>
           </Button>
-          <Button variant="outline" onClick={copyLetter}>
-            {copied ? (
-              <Check data-icon="inline-start" />
-            ) : (
-              <Copy data-icon="inline-start" />
-            )}
-            Copy letter
-          </Button>
         </div>
-      </SheetFooter>
-    </>
+      </Card>
+
+      {/* Two-column content */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Score breakdown */}
+        <Card className="p-6">
+          <h3 className="mb-4 text-sm font-semibold text-foreground">Score Breakdown</h3>
+          <div className="flex flex-col gap-2">
+            {match.breakdown.map((item) => (
+              <div
+                key={item.label}
+                className="flex items-start gap-3 rounded-lg border border-border bg-background/40 p-3"
+              >
+                {item.met ? (
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                ) : (
+                  <XCircle className="mt-0.5 size-4 shrink-0 text-warning" />
+                )}
+                <div>
+                  <p className="text-sm font-medium text-foreground">{item.label}</p>
+                  <p className="text-xs text-muted-foreground">{item.note}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Cover letter */}
+        <Card className="p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-foreground">Cover Letter</h3>
+            <Button size="sm" variant="outline" onClick={copyLetter}>
+              {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+              {copied ? "Copied" : "Copy"}
+            </Button>
+          </div>
+          <p className="rounded-lg border border-border bg-background/40 p-4 text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
+            {match.coverLetter}
+          </p>
+        </Card>
+      </div>
+    </div>
   )
 }
