@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useRef, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import {
   CheckCircle2,
@@ -23,7 +23,6 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Textarea } from "@/components/ui/textarea"
 import { updateMatchStatus, regenerateMatches, saveCoverLetter, type MatchDoc } from "@/lib/actions"
 
 const statusStyles: Record<MatchDoc["status"], string> = {
@@ -189,6 +188,31 @@ function MatchDetail({
   const [coverLetter, setCoverLetter] = useState(match.coverLetter ?? "")
   const [savingLetter, setSavingLetter] = useState(false)
   const [editingLetter, setEditingLetter] = useState(false)
+  const editorRef = useRef<HTMLDivElement>(null)
+
+  // Populate the contentEditable with paragraph elements when entering edit mode
+  useEffect(() => {
+    if (editingLetter && editorRef.current) {
+      editorRef.current.innerHTML = coverLetter
+        .split(/\n\n+/)
+        .map((p) => `<p>${p.replace(/\n/g, "<br>") || "<br>"}</p>`)
+        .join("")
+    }
+  }, [editingLetter]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Read the contentEditable back to plain text (paragraphs separated by \n\n)
+  const syncFromEditor = useCallback(() => {
+    if (!editorRef.current) return
+    const paragraphs = Array.from(editorRef.current.querySelectorAll("p"))
+    if (paragraphs.length === 0) {
+      setCoverLetter(editorRef.current.innerText.trim())
+      return
+    }
+    const text = paragraphs
+      .map((p) => p.innerText.replace(/\n$/, ""))
+      .join("\n\n")
+    setCoverLetter(text)
+  }, [])
 
   const copyLetter = async () => {
     try {
@@ -225,50 +249,32 @@ function MatchDetail({
           <span className="text-sm text-muted-foreground">{match.role} at {match.company}</span>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Edit pane */}
-          <div className="flex flex-col gap-1.5">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Edit</p>
-            <Textarea
-              value={coverLetter}
-              onChange={(e) => setCoverLetter(e.target.value)}
-              onBlur={handleLetterBlur}
-              className="min-h-[520px] resize-y text-sm leading-7"
-              placeholder="Your cover letter will appear here..."
-            />
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground tabular-nums">{coverLetter.length} characters</p>
-              {savingLetter && <span className="text-xs text-muted-foreground">Saving...</span>}
-            </div>
-            <div className="flex gap-2 pt-1">
-              <Button onClick={handleLetterBlur} disabled={savingLetter || coverLetter === match.coverLetter}>
-                {savingLetter ? "Saving..." : "Save changes"}
-              </Button>
-              <Button variant="outline" onClick={copyLetter}>
-                {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-                {copied ? "Copied" : "Copy to clipboard"}
-              </Button>
-            </div>
+        <div className="flex flex-col gap-1.5">
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={syncFromEditor}
+            onBlur={() => { syncFromEditor(); handleLetterBlur() }}
+            className={[
+              "min-h-[520px] w-full rounded-md border border-border bg-background px-5 py-5",
+              "text-sm text-foreground outline-none focus:ring-2 focus:ring-ring",
+              "[&_p]:mb-6 [&_p]:leading-7 [&_p:last-child]:mb-0",
+              "empty:before:text-muted-foreground empty:before:content-['Your_cover_letter_will_appear_here...']",
+            ].join(" ")}
+          />
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-xs text-muted-foreground tabular-nums">{coverLetter.length} characters</p>
+            {savingLetter && <span className="text-xs text-muted-foreground">Saving...</span>}
           </div>
-
-          {/* Preview pane */}
-          <div className="flex flex-col gap-1.5">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Preview</p>
-            <div className="min-h-[520px] rounded-md border border-border bg-background/50 px-4 py-4 text-sm text-foreground">
-              {coverLetter
-                ? coverLetter.split(/\n\n+/).map((para, i) => (
-                    <p key={i} className="mb-5 leading-7 last:mb-0">
-                      {para.split('\n').map((line, j, arr) => (
-                        <span key={j}>
-                          {line}
-                          {j < arr.length - 1 && <br />}
-                        </span>
-                      ))}
-                    </p>
-                  ))
-                : <span className="text-muted-foreground">Start typing to see a preview...</span>
-              }
-            </div>
+          <div className="flex gap-2">
+            <Button onClick={handleLetterBlur} disabled={savingLetter || coverLetter === match.coverLetter}>
+              {savingLetter ? "Saving..." : "Save changes"}
+            </Button>
+            <Button variant="outline" onClick={copyLetter}>
+              {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+              {copied ? "Copied" : "Copy to clipboard"}
+            </Button>
           </div>
         </div>
       </div>
