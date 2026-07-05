@@ -11,7 +11,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Chief of Staff — Agentic Career Platform',
+  title: 'Chief of Staff - Agentic Career Platform',
   description:
     'Your autonomous AI Chief of Staff. Sub-agents scan the market, score matches, network on your behalf, and draft thought leadership — all day, every day.',
   generator: 'v0.app',
