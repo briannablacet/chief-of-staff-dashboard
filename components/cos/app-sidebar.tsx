@@ -25,12 +25,14 @@ export function AppSidebar({
   profileName,
   profileHeadline,
   onProfileClick,
+  onNavigateToAgents,
 }: {
   active: ViewKey
   onNavigate: (v: ViewKey) => void
   profileName?: string
   profileHeadline?: string
   onProfileClick?: () => void
+  onNavigateToAgents?: () => void
 }) {
   return (
     <nav
@@ -81,15 +83,19 @@ export function AppSidebar({
       </ul>
 
       <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-2.5">
-          <span className="relative flex size-2.5">
+        <button
+          type="button"
+          onClick={onNavigateToAgents}
+          className="flex w-full items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent"
+        >
+          <span className="relative flex size-2.5 shrink-0">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />
             <Circle className="size-2.5 fill-success text-success" />
           </span>
           <p className="text-xs text-muted-foreground">
             <span className="font-medium text-sidebar-foreground">4 agents</span> active
           </p>
-        </div>
+        </button>
 
         <button
           type="button"

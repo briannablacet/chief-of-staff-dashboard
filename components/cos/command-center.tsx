@@ -23,9 +23,10 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { agents, topMatches, postIdeas } from '@/lib/cos-data'
+import { agents, postIdeas } from '@/lib/cos-data'
 import type { ViewKey } from './app-sidebar'
 import { cn } from '@/lib/utils'
+import { regenerateMatches, type MatchDoc } from '@/lib/actions'
 
 const today = new Date().toLocaleDateString('en-US', {
   weekday: 'long',
@@ -33,10 +34,10 @@ const today = new Date().toLocaleDateString('en-US', {
   day: 'numeric',
 })
 
-export function CommandCenter({ onNavigate, profileName }: { onNavigate: (v: ViewKey) => void; profileName?: string }) {
+export function CommandCenter({ onNavigate, onNavigateToMatch, profileName, initialMatches = [] }: { onNavigate: (v: ViewKey) => void; onNavigateToMatch?: (matchId: string) => void; profileName?: string; initialMatches?: MatchDoc[] }) {
   return (
     <div className="flex flex-col gap-6">
-      <DailyDigest onNavigate={onNavigate} profileName={profileName} />
+      <DailyDigest onNavigate={onNavigate} onNavigateToMatch={onNavigateToMatch} profileName={profileName} initialMatches={initialMatches} />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -92,16 +93,23 @@ export function CommandCenter({ onNavigate, profileName }: { onNavigate: (v: Vie
   )
 }
 
-function DailyDigest({ onNavigate, profileName }: { onNavigate: (v: ViewKey) => void; profileName?: string }) {
+function DailyDigest({ onNavigate, onNavigateToMatch, profileName, initialMatches }: { onNavigate: (v: ViewKey) => void; onNavigateToMatch?: (matchId: string) => void; profileName?: string; initialMatches: MatchDoc[] }) {
   const [regenerating, setRegenerating] = useState(false)
+  const [matches, setMatches] = useState<MatchDoc[]>(initialMatches)
 
   const firstName = profileName?.split(' ')[0] ?? 'there'
+  const topThree = matches.slice(0, 3)
 
   const handleRegenerate = async () => {
     setRegenerating(true)
-    await new Promise((r) => setTimeout(r, 2000))
-    setRegenerating(false)
-    toast.success('Matches regenerated', { description: 'Your agents have re-scored all active listings.' })
+    try {
+      await regenerateMatches()
+      toast.success('Matches regenerated', { description: 'Your agents have re-scored all active listings based on your target roles.' })
+    } catch {
+      toast.error('Failed to regenerate matches')
+    } finally {
+      setRegenerating(false)
+    }
   }
 
   return (
@@ -119,7 +127,7 @@ function DailyDigest({ onNavigate, profileName }: { onNavigate: (v: ViewKey) => 
           </div>
           <Badge className="gap-1 bg-primary/15 text-primary" variant="secondary">
             <TrendingUp className="size-3.5" />
-            Top 3 Job Matches Found Today
+            {topThree.length > 0 ? `Top ${topThree.length} Match${topThree.length !== 1 ? 'es' : ''} Found` : 'No Matches Yet'}
           </Badge>
         </div>
       </CardHeader>
@@ -132,31 +140,35 @@ function DailyDigest({ onNavigate, profileName }: { onNavigate: (v: ViewKey) => 
         </p>
 
         <div className="flex flex-col gap-3">
-          {topMatches.map((match) => (
-            <div
-              key={match.id}
-              className="flex flex-col gap-3 rounded-lg border border-border bg-background/40 p-4 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex size-11 items-center justify-center rounded-lg bg-secondary text-sm font-semibold text-secondary-foreground">
-                  {match.company.slice(0, 2)}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">{match.role}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {match.company} &bull; {match.location} &bull; {match.salary}
-                  </p>
+          {topThree.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No matches yet — click Regenerate Matches to get started.</p>
+          ) : (
+            topThree.map((match) => (
+              <div
+                key={match.matchId}
+                className="flex flex-col gap-3 rounded-lg border border-border bg-background/40 p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex size-11 items-center justify-center rounded-lg bg-secondary text-sm font-semibold text-secondary-foreground">
+                    {match.company.slice(0, 2)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">{match.role}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {match.company} &bull; {match.location} &bull; {match.salary}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MatchScore score={match.score} />
+                  <Button size="sm" variant="ghost" onClick={() => onNavigateToMatch ? onNavigateToMatch(match.matchId) : onNavigate('matches')}>
+                    View Details
+                    <ChevronRight data-icon="inline-end" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <MatchScore score={match.score} />
-                <Button size="sm" variant="ghost" onClick={() => onNavigate('matches')}>
-                  View Details
-                  <ChevronRight data-icon="inline-end" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </CardContent>
       <CardFooter className="flex flex-wrap gap-2 border-t border-border">

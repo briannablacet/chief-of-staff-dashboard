@@ -33,6 +33,9 @@ interface DirectivesState {
   resumeFileName: string
   linkedinUrl: string
   defaultCoverLetter: string
+  dailyMatchLimit: number
+  dailyCoverLetterLimit: number
+  minMatchScore: number
 }
 
 interface DirectivesProps {
@@ -58,6 +61,9 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
     resumeFileName: d?.resumeFileName ?? "",
     linkedinUrl: d?.linkedinUrl ?? "",
     defaultCoverLetter: d?.defaultCoverLetter ?? "",
+    dailyMatchLimit: d?.dailyMatchLimit ?? 10,
+    dailyCoverLetterLimit: d?.dailyCoverLetterLimit ?? 5,
+    minMatchScore: d?.minMatchScore ?? 80,
   })
 
   const set = <K extends keyof DirectivesState>(key: K, value: DirectivesState[K]) =>
@@ -77,14 +83,16 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
     resumeFileName: state.resumeFileName,
     linkedinUrl: state.linkedinUrl,
     defaultCoverLetter: state.defaultCoverLetter,
+    dailyMatchLimit: state.dailyMatchLimit,
+    dailyCoverLetterLimit: state.dailyCoverLetterLimit,
+    minMatchScore: state.minMatchScore,
   })
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-foreground">Settings</h1>
-        <p className="text-sm font-medium text-foreground/80">Configure your job search.</p>
-        <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-1">
+        <p className="text-2xl font-semibold text-foreground">Configure your job search.</p>
+        <p className="text-base text-muted-foreground">
           Set up your profile, target roles, dream companies, and dealbreakers.
         </p>
       </div>
@@ -154,69 +162,157 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Job Targets</CardTitle>
-        <CardDescription>Define the roles worth your Chief of Staff&apos;s attention.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="titles">Target job titles</FieldLabel>
-            <Input id="titles" value={state.titles} onChange={(e) => set("titles", e.target.value)} />
-            <FieldDescription>Separate multiple titles with commas.</FieldDescription>
-          </Field>
+    <div className="flex flex-col gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Target Roles</CardTitle>
+          <CardDescription>Define the roles worth your Chief of Staff&apos;s attention.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="titles">Target job titles</FieldLabel>
+              <Input id="titles" value={state.titles} onChange={(e) => set("titles", e.target.value)} />
+              <FieldDescription>Separate multiple titles with commas.</FieldDescription>
+            </Field>
 
-          <Field>
-            <FieldLabel>
-              Target salary range
-              <Badge variant="secondary" className="ml-2 tabular-nums text-primary">
-                {`$${state.salary[0]}k – $${state.salary[1]}k`}
-              </Badge>
-            </FieldLabel>
-            <div className="px-1 pt-3 pb-1">
-              <Slider
-                value={state.salary}
-                onValueChange={(v) => set("salary", v as number[])}
-                min={80}
-                max={400}
-                step={5}
-                aria-label="Salary range"
-              />
-              <div className="mt-2 flex justify-between text-xs text-muted-foreground tabular-nums">
-                <span>$80k</span>
-                <span>$400k</span>
+            <Field>
+              <FieldLabel htmlFor="location">Location preferences</FieldLabel>
+              <div className="relative">
+                <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input id="location" className="pl-9" value={state.locations} onChange={(e) => set("locations", e.target.value)} />
               </div>
-            </div>
-            <FieldDescription>Roles below your floor are auto-rejected by the Resume Scorer Agent.</FieldDescription>
-          </Field>
+              <FieldDescription>Add cities or &quot;Remote&quot; regions.</FieldDescription>
+            </Field>
 
-          <Separator />
+            <Separator />
 
-          <Field>
-            <FieldLabel htmlFor="location">Location preferences</FieldLabel>
-            <div className="relative">
-              <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input id="location" className="pl-9" value={state.locations} onChange={(e) => set("locations", e.target.value)} />
-            </div>
-            <FieldDescription>Add cities or &quot;Remote&quot; regions.</FieldDescription>
-          </Field>
+            <Field>
+              <FieldLabel>
+                Target salary range
+                <Badge variant="secondary" className="ml-2 tabular-nums text-primary">
+                  {`$${state.salary[0]}k – $${state.salary[1]}k`}
+                </Badge>
+              </FieldLabel>
+              <div className="px-1 pt-3 pb-1">
+                <Slider
+                  value={state.salary}
+                  onValueChange={(v) => set("salary", v as number[])}
+                  min={80}
+                  max={400}
+                  step={5}
+                  aria-label="Salary range"
+                />
+                <div className="mt-2 flex justify-between text-xs text-muted-foreground tabular-nums">
+                  <span>$80k</span>
+                  <span>$400k</span>
+                </div>
+              </div>
+              <FieldDescription>Roles below your floor are auto-rejected by the Resume Scorer Agent.</FieldDescription>
+            </Field>
 
-          <Field orientation="horizontal">
-            <Button onClick={save} disabled={isPending}>
-              {isPending ? "Saving..." : "Save targets"}
-            </Button>
-            <Button variant="ghost" className="text-muted-foreground" onClick={() => {
-              set("titles", "Senior Product Manager, Group PM, Principal PM")
-              set("locations", "Remote (US), New York, San Francisco")
-              set("salary", [190, 270])
-            }}>
-              Reset
-            </Button>
-          </Field>
-        </FieldGroup>
-      </CardContent>
-    </Card>
+            <Field orientation="horizontal">
+              <Button onClick={save} disabled={isPending}>
+                {isPending ? "Saving..." : "Save match settings"}
+              </Button>
+              <Button variant="ghost" className="text-muted-foreground" onClick={() => {
+                set("titles", "Senior Product Manager, Group PM, Principal PM")
+                set("locations", "Remote (US), New York, San Francisco")
+                set("salary", [190, 270])
+              }}>
+                Reset
+              </Button>
+            </Field>
+          </FieldGroup>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Match Preferences</CardTitle>
+          <CardDescription>Control the quality bar and daily volume of your matches.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Field>
+              <FieldLabel>
+                Minimum match score
+                <Badge variant="secondary" className="ml-2 tabular-nums text-primary">
+                  {state.minMatchScore}%
+                </Badge>
+              </FieldLabel>
+              <div className="px-1 pt-3 pb-1">
+                <Slider
+                  value={[state.minMatchScore]}
+                  onValueChange={(v) => set("minMatchScore", v[0])}
+                  min={50}
+                  max={100}
+                  step={1}
+                  aria-label="Minimum match score"
+                />
+                <div className="mt-2 flex justify-between text-xs text-muted-foreground tabular-nums">
+                  <span>50%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+              <FieldDescription>Only show matches that score at or above this threshold. Higher means fewer but better matches.</FieldDescription>
+            </Field>
+
+            <Separator />
+
+            <Field>
+              <FieldLabel>
+                Matches to surface per day
+                <Badge variant="secondary" className="ml-2 tabular-nums text-primary">
+                  {state.dailyMatchLimit}
+                </Badge>
+              </FieldLabel>
+              <div className="px-1 pt-3 pb-1">
+                <Slider
+                  value={[state.dailyMatchLimit]}
+                  onValueChange={(v) => set("dailyMatchLimit", v[0])}
+                  min={1}
+                  max={50}
+                  step={1}
+                  aria-label="Daily match limit"
+                />
+                <div className="mt-2 flex justify-between text-xs text-muted-foreground tabular-nums">
+                  <span>1</span>
+                  <span>50</span>
+                </div>
+              </div>
+              <FieldDescription>Your Resume Scorer Agent will surface up to this many roles in your daily digest.</FieldDescription>
+            </Field>
+
+            <Separator />
+
+            <Field>
+              <FieldLabel>
+                Cover letters to generate per day
+                <Badge variant="secondary" className="ml-2 tabular-nums text-primary">
+                  {state.dailyCoverLetterLimit}
+                </Badge>
+              </FieldLabel>
+              <div className="px-1 pt-3 pb-1">
+                <Slider
+                  value={[state.dailyCoverLetterLimit]}
+                  onValueChange={(v) => set("dailyCoverLetterLimit", v[0])}
+                  min={1}
+                  max={20}
+                  step={1}
+                  aria-label="Daily cover letter limit"
+                />
+                <div className="mt-2 flex justify-between text-xs text-muted-foreground tabular-nums">
+                  <span>1</span>
+                  <span>20</span>
+                </div>
+              </div>
+              <FieldDescription>Your Ghostwriter Agent will draft cover letters for your top matches up to this limit.</FieldDescription>
+            </Field>
+          </FieldGroup>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 
