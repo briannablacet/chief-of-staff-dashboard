@@ -102,7 +102,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
-          {view === "command" && <CommandCenter onNavigate={navigate} />}
+          {view === "command" && <CommandCenter onNavigate={navigate} profileName={initialDirectives?.name} />}
           {view === "directives" && (
             <Directives
               initialDirectives={initialDirectives}
