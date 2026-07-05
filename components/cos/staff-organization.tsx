@@ -1,39 +1,61 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { toast } from 'sonner'
-import { Terminal, Target } from 'lucide-react'
+import { useState, useTransition } from "react"
+import { toast } from "sonner"
+import { Terminal, Target } from "lucide-react"
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
-import { agents, type AgentKey } from '@/lib/cos-data'
+} from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
+import { Separator } from "@/components/ui/separator"
+import { agents, type AgentKey } from "@/lib/cos-data"
+import { saveAgentConfig, type AgentDoc } from "@/lib/actions"
 
-export function StaffOrganization() {
-  const [paused, setPaused] = useState<Record<AgentKey, boolean>>({
-    scraper: false,
-    scorer: false,
-    networking: false,
-    thought: false,
+interface StaffOrganizationProps {
+  initialAgentConfigs: AgentDoc[]
+}
+
+export function StaffOrganization({ initialAgentConfigs }: StaffOrganizationProps) {
+  // Build initial enabled state: prefer DB value, fall back to true (active)
+  const [paused, setPaused] = useState<Record<AgentKey, boolean>>(() => {
+    const map: Record<string, boolean> = {}
+    for (const cfg of initialAgentConfigs) {
+      map[cfg.agentId] = !cfg.enabled
+    }
+    return {
+      scraper: map["scraper"] ?? false,
+      scorer: map["scorer"] ?? false,
+      networking: map["networking"] ?? false,
+      thought: map["thought"] ?? false,
+    }
   })
 
+  const [pending, startTransition] = useTransition()
+
   const toggle = (key: AgentKey, name: string) => {
-    setPaused((prev) => {
-      const next = { ...prev, [key]: !prev[key] }
-      toast(next[key] ? `${name} paused` : `${name} resumed`, {
-        description: next[key]
-          ? 'This agent has stopped taking new actions.'
-          : 'This agent is back to work.',
-      })
-      return next
+    const nextPaused = !paused[key]
+    setPaused((prev) => ({ ...prev, [key]: nextPaused }))
+
+    startTransition(async () => {
+      try {
+        await saveAgentConfig(key, { enabled: !nextPaused })
+        toast(nextPaused ? `${name} paused` : `${name} resumed`, {
+          description: nextPaused
+            ? "This agent has stopped taking new actions."
+            : "This agent is back to work.",
+        })
+      } catch {
+        // Roll back optimistic update
+        setPaused((prev) => ({ ...prev, [key]: !nextPaused }))
+        toast.error("Failed to save — check your MongoDB connection")
+      }
     })
   }
 
@@ -42,7 +64,8 @@ export function StaffOrganization() {
       <div>
         <h1 className="text-xl font-semibold text-foreground">Staff Organization</h1>
         <p className="text-sm text-muted-foreground">
-          Manage your four sub-agents, review their instructions, and tune performance.
+          Manage your four sub-agents, review their instructions, and tune
+          performance.
         </p>
       </div>
 
@@ -65,11 +88,7 @@ export function StaffOrganization() {
                   </div>
                   <Badge
                     variant="outline"
-                    className={
-                      isPaused
-                        ? 'gap-1.5 text-warning'
-                        : 'gap-1.5 text-success'
-                    }
+                    className={isPaused ? "gap-1.5 text-warning" : "gap-1.5 text-success"}
                   >
                     <span className="relative flex size-2">
                       {!isPaused && (
@@ -78,12 +97,12 @@ export function StaffOrganization() {
                       <span
                         className={
                           isPaused
-                            ? 'relative inline-flex size-2 rounded-full bg-warning'
-                            : 'relative inline-flex size-2 rounded-full bg-success'
+                            ? "relative inline-flex size-2 rounded-full bg-warning"
+                            : "relative inline-flex size-2 rounded-full bg-success"
                         }
                       />
                     </span>
-                    {isPaused ? 'Paused' : 'Active'}
+                    {isPaused ? "Paused" : "Active"}
                   </Badge>
                 </div>
               </CardHeader>
@@ -114,17 +133,21 @@ export function StaffOrganization() {
                 <Separator />
 
                 <div className="flex items-center justify-between rounded-lg bg-secondary/40 px-3 py-2.5">
-                  <Label htmlFor={`toggle-${agent.key}`} className="flex flex-col gap-0.5">
+                  <Label
+                    htmlFor={`toggle-${agent.key}`}
+                    className="flex flex-col gap-0.5"
+                  >
                     <span className="text-sm font-medium text-foreground">
-                      {isPaused ? 'Resume Agent' : 'Pause Agent'}
+                      {isPaused ? "Resume Agent" : "Pause Agent"}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {isPaused ? 'Currently idle' : 'Running autonomously'}
+                      {isPaused ? "Currently idle" : "Running autonomously"}
                     </span>
                   </Label>
                   <Switch
                     id={`toggle-${agent.key}`}
                     checked={!isPaused}
+                    disabled={pending}
                     onCheckedChange={() => toggle(agent.key, agent.name)}
                   />
                 </div>
