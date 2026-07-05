@@ -21,7 +21,8 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { updateMatchStatus, regenerateMatches, type MatchDoc } from "@/lib/actions"
+import { Textarea } from "@/components/ui/textarea"
+import { updateMatchStatus, regenerateMatches, saveCoverLetter, type MatchDoc } from "@/lib/actions"
 import { cn } from "@/lib/utils"
 
 const statusStyles: Record<MatchDoc["status"], string> = {
@@ -183,16 +184,32 @@ function MatchDetail({
 }) {
   const [copied, setCopied] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [coverLetter, setCoverLetter] = useState(match.coverLetter ?? "")
+  const [savingLetter, setSavingLetter] = useState(false)
 
   const copyLetter = async () => {
     try {
-      await navigator.clipboard.writeText(match.coverLetter)
+      await navigator.clipboard.writeText(coverLetter)
       setCopied(true)
-      toast.success("Cover letter copied", { description: `Tailored for ${match.company}.` })
+      toast.success("Copied to clipboard")
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error("Could not copy to clipboard")
+      toast.error("Failed to copy")
     }
+  }
+
+  const handleLetterBlur = async () => {
+    if (coverLetter === match.coverLetter) return
+    setSavingLetter(true)
+    try {
+      await saveCoverLetter(match.matchId, coverLetter)
+      toast.success("Cover letter saved")
+    } catch {
+      toast.error("Failed to save cover letter")
+    } finally {
+      setSavingLetter(false)
+    }
+  }
   }
 
   const markApplied = () => {
@@ -333,15 +350,25 @@ function MatchDetail({
         {/* Cover letter */}
         <Card className="p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-foreground">Cover Letter</h3>
-            <Button size="sm" variant="outline" onClick={copyLetter}>
-              {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-              {copied ? "Copied" : "Copy"}
-            </Button>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Cover Letter</h3>
+              <p className="text-xs text-muted-foreground">Click to edit. Auto-saves on blur.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {savingLetter && <span className="text-xs text-muted-foreground">Saving...</span>}
+              <Button size="sm" variant="outline" onClick={copyLetter}>
+                {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+                {copied ? "Copied" : "Copy"}
+              </Button>
+            </div>
           </div>
-          <p className="rounded-lg border border-border bg-background/40 p-4 text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
-            {match.coverLetter}
-          </p>
+          <Textarea
+            value={coverLetter}
+            onChange={(e) => setCoverLetter(e.target.value)}
+            onBlur={handleLetterBlur}
+            className="min-h-72 resize-y text-sm leading-relaxed"
+            placeholder="Your cover letter will appear here..."
+          />
         </Card>
       </div>
     </div>

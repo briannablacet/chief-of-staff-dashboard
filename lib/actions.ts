@@ -135,6 +135,15 @@ export async function saveAgentConfig(
   revalidatePath("/")
 }
 
+export async function saveCoverLetter(matchId: string, coverLetter: string): Promise<void> {
+  const db = await getDb()
+  await db.collection<MatchDoc>("matches").updateOne(
+    { userId: USER_ID, matchId },
+    { $set: { coverLetter, updatedAt: new Date() } }
+  )
+  revalidatePath("/")
+}
+
 export async function saveJobUrl(matchId: string, jobUrl: string): Promise<void> {
   const db = await getDb()
   await db.collection<MatchDoc>("matches").updateOne(

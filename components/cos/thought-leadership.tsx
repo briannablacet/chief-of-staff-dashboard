@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { Copy, Check, RefreshCw, PenLine } from 'lucide-react'
+import { Copy, Check, RefreshCw, PenLine, ArrowLeft } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 
 interface PostIdea {
   id: string
@@ -74,7 +75,6 @@ export function ThoughtLeadership({
   targetTitles?: string | string[]
   targetCompanies?: string[]
 }) {
-  // targetTitles may come in as a comma-separated string or already as an array
   const titles = Array.isArray(targetTitles)
     ? targetTitles.flatMap((t) => t.split(',').map((s) => s.trim())).filter(Boolean)
     : targetTitles
@@ -86,6 +86,7 @@ export function ThoughtLeadership({
   const allIdeas = generatePostIdeas(titles, companies)
   const [displayIdeas, setDisplayIdeas] = useState<PostIdea[]>(allIdeas)
   const [refreshing, setRefreshing] = useState(false)
+  const [selected, setSelected] = useState<PostIdea | null>(null)
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -93,6 +94,19 @@ export function ThoughtLeadership({
     setDisplayIdeas((prev) => [...prev.slice(1), prev[0]])
     setRefreshing(false)
     toast.success('Post ideas refreshed', { description: 'New angles generated from your target roles.' })
+  }
+
+  if (selected) {
+    return (
+      <PostEditor
+        idea={selected}
+        onBack={() => setSelected(null)}
+        onSave={(updated) => {
+          setDisplayIdeas((prev) => prev.map((p) => (p.id === updated.id ? updated : p)))
+          setSelected(updated)
+        }}
+      />
+    )
   }
 
   return (
@@ -112,27 +126,14 @@ export function ThoughtLeadership({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {displayIdeas.map((idea) => (
-          <PostIdeaCard key={idea.id} idea={idea} />
+          <PostIdeaCard key={idea.id} idea={idea} onOpen={() => setSelected(idea)} />
         ))}
       </div>
     </div>
   )
 }
 
-function PostIdeaCard({ idea }: { idea: PostIdea }) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(idea.body)
-      setCopied(true)
-      toast.success('Copied to clipboard', { description: 'Post is ready to paste into LinkedIn.' })
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      toast.error('Could not copy to clipboard')
-    }
-  }
-
+function PostIdeaCard({ idea, onOpen }: { idea: PostIdea; onOpen: () => void }) {
   return (
     <Card className="flex flex-col gap-0 py-0">
       <CardHeader className="gap-2 px-4 pt-4 pb-3">
@@ -145,16 +146,108 @@ function PostIdeaCard({ idea }: { idea: PostIdea }) {
         <CardTitle className="text-sm leading-snug text-balance">{idea.hook}</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 px-4 pb-3">
-        <p className="line-clamp-6 whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
+        <p className="line-clamp-5 whitespace-pre-line text-xs leading-relaxed text-muted-foreground">
           {idea.body}
         </p>
       </CardContent>
       <CardFooter className="border-t border-border px-4 py-3">
-        <Button size="sm" variant="secondary" className="w-full" onClick={handleCopy}>
-          {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-          {copied ? 'Copied' : 'Copy to Clipboard'}
+        <Button size="sm" variant="secondary" className="w-full" onClick={onOpen}>
+          <PenLine data-icon="inline-start" />
+          Open &amp; Edit
         </Button>
       </CardFooter>
     </Card>
+  )
+}
+
+function PostEditor({
+  idea,
+  onBack,
+  onSave,
+}: {
+  idea: PostIdea
+  onBack: () => void
+  onSave: (updated: PostIdea) => void
+}) {
+  const [body, setBody] = useState(idea.body)
+  const [hook, setHook] = useState(idea.hook)
+  const [copied, setCopied] = useState(false)
+  const isDirty = body !== idea.body || hook !== idea.hook
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(body)
+      setCopied(true)
+      toast.success('Copied to clipboard', { description: 'Post is ready to paste into LinkedIn.' })
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('Could not copy to clipboard')
+    }
+  }
+
+  const handleSave = () => {
+    onSave({ ...idea, hook, body })
+    toast.success('Post saved')
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Button variant="ghost" size="sm" onClick={onBack}>
+          <ArrowLeft data-icon="inline-start" />
+          All post ideas
+        </Button>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-muted-foreground">{idea.topic}</Badge>
+          {isDirty && (
+            <Button size="sm" onClick={handleSave}>
+              Save changes
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={handleCopy}>
+            {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+            {copied ? 'Copied' : 'Copy to clipboard'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Hook line */}
+      <div className="flex flex-col gap-1.5">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Opening hook</p>
+        <Textarea
+          value={hook}
+          onChange={(e) => setHook(e.target.value)}
+          className="resize-none text-base font-semibold leading-snug"
+          rows={2}
+          placeholder="Your opening hook..."
+        />
+      </div>
+
+      {/* Full post body */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Post body</p>
+          <p className="text-xs text-muted-foreground tabular-nums">{body.length} chars</p>
+        </div>
+        <Textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          className="min-h-96 resize-y text-sm leading-relaxed"
+          placeholder="Your full post..."
+        />
+      </div>
+
+      {/* Tips */}
+      <div className="rounded-lg border border-border bg-secondary/40 p-4">
+        <p className="mb-2 text-xs font-medium text-foreground">LinkedIn post tips</p>
+        <ul className="flex flex-col gap-1 text-xs text-muted-foreground">
+          <li>Aim for 1,300 characters or fewer for maximum reach.</li>
+          <li>Line breaks matter \u2014 white space increases engagement.</li>
+          <li>End with a question to drive comments.</li>
+          <li>Post Tuesday\u2013Thursday between 8\u201310am for best visibility.</li>
+        </ul>
+      </div>
+    </div>
   )
 }
