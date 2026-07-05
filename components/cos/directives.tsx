@@ -506,17 +506,17 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
               <FieldLabel htmlFor="cover-letter">Base template</FieldLabel>
               <Textarea
                 id="cover-letter"
-                placeholder={"Dear Hiring Manager,\n\nI'm excited to apply for the [Role] position at [Company]...\n\nWrite your base letter here. Your agents will substitute [Role], [Company], and [Hiring Manager] automatically."}
-                className="min-h-72 resize-y font-mono text-sm leading-relaxed"
+                placeholder={`Dear [Company] Hiring Team,\n\nI am writing to apply for the [Role] position on your [Team] team.\n\nAs [Headline], I have spent my career building products that create real, measurable impact — and everything I know about [Company] suggests this is exactly the environment where that work thrives.\n\nI bring deep experience in [Team] product work, and I would love to bring that to [Company].\n\nThank you for your consideration.\n\nBest regards,\n[Name]`}
+                className="min-h-96 resize-y font-mono text-sm leading-relaxed"
                 value={state.defaultCoverLetter}
                 onChange={(e) => set("defaultCoverLetter", e.target.value)}
               />
               <FieldDescription className="flex items-center justify-between">
                 <span>
-                  Use <code className="rounded bg-accent px-1 py-0.5 text-xs">[Role]</code>,{" "}
-                  <code className="rounded bg-accent px-1 py-0.5 text-xs">[Company]</code>, and{" "}
-                  <code className="rounded bg-accent px-1 py-0.5 text-xs">[Hiring Manager]</code>{" "}
-                  as placeholders.
+                  Placeholders:{" "}
+                  {["[Company]", "[Role]", "[Team]", "[RoleFull]", "[Headline]", "[Name]"].map((p) => (
+                    <code key={p} className="mr-1 rounded bg-accent px-1 py-0.5 text-xs">{p}</code>
+                  ))}
                 </span>
                 <span className="ml-4 shrink-0 tabular-nums text-muted-foreground">{state.defaultCoverLetter.length} chars</span>
               </FieldDescription>

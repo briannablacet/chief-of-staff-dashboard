@@ -6,19 +6,20 @@ import {
   SlidersHorizontal,
   Inbox,
   Sparkles,
-  Circle,
   PenLine,
+  Bot,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
-export type ViewKey = 'command' | 'staff' | 'directives' | 'matches' | 'thought-leadership'
+export type ViewKey = 'command' | 'staff' | 'directives' | 'matches' | 'thought-leadership' | 'agents'
 
 const NAV: { key: ViewKey; label: string; sub: string; icon: typeof Inbox }[] = [
-  { key: 'directives', label: 'Settings', sub: 'Configuration', icon: SlidersHorizontal },
-  { key: 'command', label: 'Command Center', sub: 'Daily digest', icon: LayoutDashboard },
-  { key: 'matches', label: 'Matches & Cover Letters', sub: 'Output archive', icon: Inbox },
-  { key: 'thought-leadership', label: 'Thought Leadership', sub: 'LinkedIn post ideas', icon: PenLine },
+  { key: 'command',           label: 'Dashboard',              sub: 'Daily digest',         icon: LayoutDashboard },
+  { key: 'matches',           label: 'Matches & Cover Letters', sub: 'Output archive',       icon: Inbox },
+  { key: 'thought-leadership', label: 'Thought Leadership',    sub: 'LinkedIn post ideas',  icon: PenLine },
+  { key: 'directives',        label: 'Settings',               sub: 'Profile & preferences', icon: SlidersHorizontal },
+  { key: 'agents',            label: 'Agent Setup',            sub: 'Configure your agents', icon: Bot },
 ]
 
 export function AppSidebar({
@@ -34,7 +35,6 @@ export function AppSidebar({
   profileName?: string
   profileHeadline?: string
   onProfileClick?: () => void
-  onNavigateToAgents?: () => void
 }) {
   return (
     <nav
@@ -47,7 +47,7 @@ export function AppSidebar({
         </div>
         <div className="leading-tight">
           <p className="text-sm font-semibold text-sidebar-foreground">Chief of Staff</p>
-          <p className="text-xs text-muted-foreground">Agentic career OS</p>
+          <p className="text-xs text-muted-foreground">AI Career Operating System</p>
         </div>
       </div>
 
@@ -85,20 +85,6 @@ export function AppSidebar({
       </ul>
 
       <div className="flex flex-col gap-3">
-        <button
-          type="button"
-          onClick={onNavigateToAgents}
-          className="flex w-full items-center gap-2 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent"
-        >
-          <span className="relative flex size-2.5 shrink-0">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />
-            <Circle className="size-2.5 fill-success text-success" />
-          </span>
-          <p className="text-xs text-muted-foreground">
-            <span className="font-medium text-sidebar-foreground">4 agents</span> active
-          </p>
-        </button>
-
         <button
           type="button"
           onClick={onProfileClick}

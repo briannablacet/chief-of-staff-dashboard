@@ -12,11 +12,12 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import type { DirectivesDoc, AgentDoc, MatchDoc } from "@/lib/actions"
 
 const TITLES: Record<ViewKey, string> = {
-  command: "Command Center",
+  command: "Dashboard",
   staff: "Staff Organization",
   directives: "Settings",
   matches: "Matches & Cover Letters",
   "thought-leadership": "Thought Leadership",
+  agents: "Agent Setup",
 }
 
 interface DashboardProps {
@@ -58,7 +59,6 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
           profileName={initialDirectives?.name}
           profileHeadline={initialDirectives?.headline}
           onProfileClick={goToProfile}
-          onNavigateToAgents={() => { setDirectivesTab("agents"); setView("directives") }}
         />
       </aside>
 
@@ -72,7 +72,6 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
             profileName={initialDirectives?.name}
             profileHeadline={initialDirectives?.headline}
             onProfileClick={goToProfile}
-            onNavigateToAgents={() => { setDirectivesTab("agents"); setView("directives"); setMobileNav(false) }}
           />
         </SheetContent>
       </Sheet>
@@ -123,6 +122,13 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
           )}
           {view === "matches" && <Matches initialMatches={initialMatches} initialSelectedMatchId={selectedMatchId} onMatchSelected={() => setSelectedMatchId(undefined)} />}
           {view === "thought-leadership" && <ThoughtLeadership targetTitles={initialDirectives?.titles} targetCompanies={initialDirectives?.dreamCompanies} />}
+          {view === "agents" && (
+            <Directives
+              initialDirectives={initialDirectives}
+              initialAgentConfigs={initialAgentConfigs}
+              defaultTab="agents"
+            />
+          )}
         </main>
       </div>
     </div>

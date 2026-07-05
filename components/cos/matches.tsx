@@ -13,21 +13,24 @@ import {
   Wallet,
   ExternalLink,
   RefreshCw,
+  PenLine,
   Building2,
-  Clock,
   Briefcase,
+  Clock,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { updateMatchStatus, regenerateMatches, type MatchDoc } from "@/lib/actions"
-import { cn } from "@/lib/utils"
+import { updateMatchStatus, regenerateMatches, saveCoverLetter, type MatchDoc } from "@/lib/actions"
 
 const statusStyles: Record<MatchDoc["status"], string> = {
-  New: "bg-primary/15 text-primary",
-  Reviewed: "bg-warning/15 text-warning",
-  Applied: "bg-success/15 text-success",
+  "New":        "bg-primary/10 text-primary",
+  "Reviewing":  "bg-warning/15 text-warning",
+  "Applied":    "bg-success/15 text-success",
+  "Archived":   "bg-muted text-muted-foreground",
 }
 
 interface MatchesProps {
@@ -183,16 +186,97 @@ function MatchDetail({
 }) {
   const [copied, setCopied] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [coverLetter, setCoverLetter] = useState(match.coverLetter ?? "")
+  const [savingLetter, setSavingLetter] = useState(false)
+  const [editingLetter, setEditingLetter] = useState(false)
+  const [rawEditing, setRawEditing] = useState(false)
 
   const copyLetter = async () => {
     try {
-      await navigator.clipboard.writeText(match.coverLetter)
+      await navigator.clipboard.writeText(coverLetter)
       setCopied(true)
-      toast.success("Cover letter copied", { description: `Tailored for ${match.company}.` })
+      toast.success("Copied to clipboard")
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      toast.error("Could not copy to clipboard")
+      toast.error("Failed to copy")
     }
+  }
+
+  const handleLetterBlur = async () => {
+    if (coverLetter === match.coverLetter) return
+    setSavingLetter(true)
+    try {
+      await saveCoverLetter(match.matchId, coverLetter)
+      toast.success("Cover letter saved")
+    } catch {
+      toast.error("Failed to save cover letter")
+    } finally {
+      setSavingLetter(false)
+    }
+  }
+
+  if (editingLetter) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => setEditingLetter(false)} className="-ml-2">
+            <ChevronLeft data-icon="inline-start" />
+            Back to match
+          </Button>
+          <span className="text-sm text-muted-foreground">{match.role} at {match.company}</span>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {rawEditing ? (
+            /* Plain textarea for editing */
+            <Textarea
+              value={coverLetter}
+              onChange={(e) => setCoverLetter(e.target.value)}
+              className="min-h-[520px] resize-y font-sans text-sm leading-6"
+              placeholder="Your cover letter will appear here..."
+              autoFocus
+            />
+          ) : (
+            /* Rendered view with proper paragraph spacing */
+            <div className="min-h-[520px] cursor-text rounded-md border border-border bg-background px-6 py-6 text-sm text-foreground" onClick={() => setRawEditing(true)}>
+              {coverLetter
+                ? coverLetter
+                    // Normalize: treat any newline (single or double) as a paragraph break
+                    .split(/\n+/)
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0)
+                    .map((para, i) => (
+                      <p key={i} className="mb-8 leading-6 last:mb-0">{para}</p>
+                    ))
+                : <span className="text-muted-foreground">Click to edit your cover letter...</span>
+              }
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              {rawEditing ? (
+                <Button size="sm" onClick={() => setRawEditing(false)}>Done editing</Button>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => setRawEditing(true)}>
+                  <PenLine data-icon="inline-start" /> Edit text
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={copyLetter}>
+                {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+                {copied ? "Copied" : "Copy to clipboard"}
+              </Button>
+            </div>
+            <div className="flex items-center gap-3">
+              {savingLetter && <span className="text-xs text-muted-foreground">Saving...</span>}
+              <Button size="sm" onClick={handleLetterBlur} disabled={savingLetter || coverLetter === match.coverLetter}>
+                Save changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const markApplied = () => {
@@ -331,17 +415,24 @@ function MatchDetail({
         </Card>
 
         {/* Cover letter */}
-        <Card className="p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-foreground">Cover Letter</h3>
-            <Button size="sm" variant="outline" onClick={copyLetter}>
-              {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
-              {copied ? "Copied" : "Copy"}
+        <Card className="flex flex-col gap-0 py-0">
+          <div className="flex-1 px-5 pt-5 pb-4">
+            <h3 className="mb-3 text-sm font-semibold text-foreground">Cover Letter</h3>
+            <div className="line-clamp-6 text-xs text-muted-foreground">
+              {coverLetter
+                ? coverLetter.split(/\n\n+/).map((para, i) => (
+                    <p key={i} className="mb-3 leading-relaxed last:mb-0">{para.replace(/\n/g, ' ')}</p>
+                  ))
+                : <p className="leading-relaxed">No cover letter generated yet.</p>
+              }
+            </div>
+          </div>
+          <div className="border-t border-border px-5 py-3">
+            <Button size="sm" variant="secondary" className="w-full" onClick={() => setEditingLetter(true)}>
+              <PenLine data-icon="inline-start" />
+              Open &amp; Edit
             </Button>
           </div>
-          <p className="rounded-lg border border-border bg-background/40 p-4 text-sm leading-relaxed text-muted-foreground whitespace-pre-line">
-            {match.coverLetter}
-          </p>
         </Card>
       </div>
     </div>
