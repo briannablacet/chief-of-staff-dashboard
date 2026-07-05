@@ -7,6 +7,14 @@ import { revalidatePath } from "next/cache"
 // Types
 // ---------------------------------------------------------------------------
 
+export type ResumeEntry = {
+  id: string        // nanoid / uuid
+  label: string     // e.g. "Senior PM — Tech", "AI Lead"
+  text: string      // plain text body
+  fileName: string  // original file name (display only)
+  isDefault: boolean
+}
+
 export type DirectivesDoc = {
   _id?: string
   userId: string
@@ -19,8 +27,11 @@ export type DirectivesDoc = {
   remoteOnly: boolean
   dreamCompanies: string[]
   dealbreakers: string[]
+  // Legacy single-resume fields — kept for backwards compat
   resumeText: string
   resumeFileName: string
+  // Multi-resume store
+  resumes: ResumeEntry[]
   linkedinUrl: string
   defaultCoverLetter: string
   dailyMatchLimit: number
@@ -43,6 +54,7 @@ export type MatchDoc = {
   postedAgo: string
   breakdown: { label: string; met: boolean; note: string }[]
   coverLetter: string
+  resumeId?: string   // which ResumeEntry was used for this application
   jobUrl?: string
   jobReqContent?: string
   updatedAt: Date
@@ -131,6 +143,15 @@ export async function saveAgentConfig(
       },
     },
     { upsert: true }
+  )
+  revalidatePath("/")
+}
+
+export async function saveResumeForMatch(matchId: string, resumeId: string): Promise<void> {
+  const db = await getDb()
+  await db.collection<MatchDoc>("matches").updateOne(
+    { userId: USER_ID, matchId },
+    { $set: { resumeId, updatedAt: new Date() } }
   )
   revalidatePath("/")
 }

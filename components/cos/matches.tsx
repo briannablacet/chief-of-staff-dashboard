@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { updateMatchStatus, regenerateMatches, saveCoverLetter, type MatchDoc } from "@/lib/actions"
+import { updateMatchStatus, regenerateMatches, saveCoverLetter, saveResumeForMatch, type MatchDoc, type ResumeEntry } from "@/lib/actions"
 import { AtsChecklist } from "@/components/cos/ats-checklist"
 
 const statusStyles: Record<MatchDoc["status"], string> = {
@@ -38,9 +38,10 @@ interface MatchesProps {
   initialMatches: MatchDoc[]
   initialSelectedMatchId?: string
   onMatchSelected?: () => void
+  resumes?: ResumeEntry[]
 }
 
-export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelected }: MatchesProps) {
+export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelected, resumes = [] }: MatchesProps) {
   const [matches, setMatches] = useState<MatchDoc[]>(initialMatches)
   const [selected, setSelected] = useState<MatchDoc | null>(
     initialSelectedMatchId ? (initialMatches.find((m) => m.matchId === initialSelectedMatchId) ?? null) : null
@@ -77,6 +78,7 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
         match={selected}
         onStatusChange={handleStatusChange}
         onBack={() => setSelected(null)}
+        resumes={resumes}
       />
     )
   }
@@ -180,11 +182,29 @@ function MatchDetail({
   match,
   onStatusChange,
   onBack,
+  resumes = [],
 }: {
   match: MatchDoc
   onStatusChange: (matchId: string, status: MatchDoc["status"]) => void
   onBack: () => void
+  resumes?: ResumeEntry[]
 }) {
+  const defaultResume = resumes.find((r) => r.isDefault) ?? resumes[0] ?? null
+  const initialResumeId = match.resumeId ?? defaultResume?.id ?? ""
+  const [selectedResumeId, setSelectedResumeId] = useState(initialResumeId)
+  const [savingResume, setSavingResume] = useState(false)
+  const activeResume = resumes.find((r) => r.id === selectedResumeId) ?? defaultResume
+
+  const handleResumeChange = async (id: string) => {
+    setSelectedResumeId(id)
+    setSavingResume(true)
+    try {
+      await saveResumeForMatch(match.matchId, id)
+    } finally {
+      setSavingResume(false)
+    }
+  }
+
   const [copied, setCopied] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [coverLetter, setCoverLetter] = useState(match.coverLetter ?? "")
@@ -417,14 +437,33 @@ function MatchDetail({
           </div>
         </Card>
 
-        {/* Resume / ATS check */}
+        {/* Resume selector + ATS check */}
         <Card className="p-6">
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Resume ATS Check</h3>
-          <AtsChecklist resume={match.resumeText ?? ""} match={match} />
-          {!match.resumeText && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              No resume text found. Paste your resume in{" "}
-              <span className="font-medium text-foreground">Settings</span> to run the ATS check.
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-foreground">Resume</h3>
+            {resumes.length > 0 && (
+              <div className="flex items-center gap-2">
+                {savingResume && <span className="text-xs text-muted-foreground">Saving...</span>}
+                <select
+                  value={selectedResumeId}
+                  onChange={(e) => handleResumeChange(e.target.value)}
+                  className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {resumes.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.label}{r.isDefault ? " (default)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          {activeResume ? (
+            <AtsChecklist resume={activeResume.text} match={match} />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              No resume found. Add one in{" "}
+              <span className="font-medium text-foreground">Settings → Resume</span> to run the ATS check.
             </p>
           )}
         </Card>
