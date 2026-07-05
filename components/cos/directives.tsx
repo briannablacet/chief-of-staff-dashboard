@@ -13,6 +13,7 @@ import {
   X,
   UploadCloud,
   Briefcase,
+  User,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
@@ -40,7 +41,55 @@ interface DirectivesProps {
   initialDirectives: DirectivesDoc | null
 }
 
+// Shared state shape passed to each tab
+interface DirectivesState {
+  name: string
+  headline: string
+  titles: string
+  locations: string
+  salary: number[]
+  dreamCompanies: string[]
+  dealbreakers: string[]
+  resumeText: string
+  resumeFileName: string
+  linkedinUrl: string
+}
+
 export function Directives({ initialDirectives }: DirectivesProps) {
+  const d = initialDirectives
+
+  // All directives state lives here so every tab save writes the full document
+  const [state, setState] = useState<DirectivesState>({
+    name: d?.name ?? "",
+    headline: d?.headline ?? "",
+    titles: d?.titles.join(", ") ?? "Senior Product Manager, Group PM, Principal PM",
+    locations: d?.locations.join(", ") ?? "Remote (US), New York, San Francisco",
+    salary: [d?.salaryMin ?? 190, d?.salaryMax ?? 270],
+    dreamCompanies: d?.dreamCompanies ?? ["Linear", "Vercel", "Stripe", "Notion", "Figma"],
+    dealbreakers: d?.dealbreakers ?? ["Exclude Fintech", "No strict RTO", "No pre-seed startups"],
+    resumeText: d?.resumeText ?? "",
+    resumeFileName: d?.resumeFileName ?? "",
+    linkedinUrl: d?.linkedinUrl ?? "",
+  })
+
+  const set = <K extends keyof DirectivesState>(key: K, value: DirectivesState[K]) =>
+    setState((prev) => ({ ...prev, [key]: value }))
+
+  const buildPayload = (): Omit<DirectivesDoc, "_id" | "userId" | "updatedAt"> => ({
+    name: state.name,
+    headline: state.headline,
+    titles: state.titles.split(",").map((s) => s.trim()).filter(Boolean),
+    locations: state.locations.split(",").map((s) => s.trim()).filter(Boolean),
+    salaryMin: state.salary[0],
+    salaryMax: state.salary[1],
+    remoteOnly: false,
+    dreamCompanies: state.dreamCompanies,
+    dealbreakers: state.dealbreakers,
+    resumeText: state.resumeText,
+    resumeFileName: state.resumeFileName,
+    linkedinUrl: state.linkedinUrl,
+  })
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -69,52 +118,40 @@ export function Directives({ initialDirectives }: DirectivesProps) {
         </TabsList>
 
         <TabsContent value="targets">
-          <JobTargetsTab initialDirectives={initialDirectives} />
+          <JobTargetsTab state={state} set={set} buildPayload={buildPayload} />
         </TabsContent>
         <TabsContent value="dealbreakers">
-          <DealbreakersTab initialDirectives={initialDirectives} />
+          <DealbreakersTab state={state} set={set} buildPayload={buildPayload} />
         </TabsContent>
         <TabsContent value="resume">
-          <ResumeTab initialDirectives={initialDirectives} />
+          <ResumeTab state={state} set={set} buildPayload={buildPayload} />
         </TabsContent>
       </Tabs>
     </div>
   )
 }
 
-function JobTargetsTab({
-  initialDirectives,
-}: {
-  initialDirectives: DirectivesDoc | null
-}) {
-  const [salary, setSalary] = useState<number[]>([
-    initialDirectives?.salaryMin ?? 190,
-    initialDirectives?.salaryMax ?? 270,
-  ])
-  const [titles, setTitles] = useState(
-    initialDirectives?.titles.join(", ") ??
-      "Senior Product Manager, Group PM, Principal PM"
-  )
-  const [locations, setLocations] = useState(
-    initialDirectives?.locations.join(", ") ??
-      "Remote (US), New York, San Francisco"
-  )
+// ---------------------------------------------------------------------------
+// Shared tab props
+// ---------------------------------------------------------------------------
+
+interface TabProps {
+  state: DirectivesState
+  set: <K extends keyof DirectivesState>(key: K, value: DirectivesState[K]) => void
+  buildPayload: () => Omit<DirectivesDoc, "_id" | "userId" | "updatedAt">
+}
+
+// ---------------------------------------------------------------------------
+// Job Targets tab
+// ---------------------------------------------------------------------------
+
+function JobTargetsTab({ state, set, buildPayload }: TabProps) {
   const [isPending, startTransition] = useTransition()
 
   const save = () => {
     startTransition(async () => {
       try {
-        await saveDirectives({
-          titles: titles.split(",").map((s) => s.trim()).filter(Boolean),
-          locations: locations.split(",").map((s) => s.trim()).filter(Boolean),
-          salaryMin: salary[0],
-          salaryMax: salary[1],
-          remoteOnly: false,
-          dreamCompanies: initialDirectives?.dreamCompanies ?? [],
-          dealbreakers: initialDirectives?.dealbreakers ?? [],
-          resumeText: initialDirectives?.resumeText ?? "",
-          linkedinUrl: initialDirectives?.linkedinUrl ?? "",
-        })
+        await saveDirectives(buildPayload())
         toast.success("Job targets saved")
       } catch {
         toast.error("Failed to save — check your MongoDB connection")
@@ -136,8 +173,8 @@ function JobTargetsTab({
             <FieldLabel htmlFor="titles">Target job titles</FieldLabel>
             <Input
               id="titles"
-              value={titles}
-              onChange={(e) => setTitles(e.target.value)}
+              value={state.titles}
+              onChange={(e) => set("titles", e.target.value)}
             />
             <FieldDescription>Separate multiple titles with commas.</FieldDescription>
           </Field>
@@ -146,13 +183,13 @@ function JobTargetsTab({
             <FieldLabel>
               Target salary range
               <Badge variant="secondary" className="ml-2 tabular-nums text-primary">
-                {`$${salary[0]}k – $${salary[1]}k`}
+                {`$${state.salary[0]}k – $${state.salary[1]}k`}
               </Badge>
             </FieldLabel>
             <div className="px-1 pt-3 pb-1">
               <Slider
-                value={salary}
-                onValueChange={(v) => setSalary(v as number[])}
+                value={state.salary}
+                onValueChange={(v) => set("salary", v as number[])}
                 min={80}
                 max={400}
                 step={5}
@@ -177,8 +214,8 @@ function JobTargetsTab({
               <Input
                 id="location"
                 className="pl-9"
-                value={locations}
-                onChange={(e) => setLocations(e.target.value)}
+                value={state.locations}
+                onChange={(e) => set("locations", e.target.value)}
               />
             </div>
             <FieldDescription>Add cities or &quot;Remote&quot; regions.</FieldDescription>
@@ -188,7 +225,15 @@ function JobTargetsTab({
             <Button onClick={save} disabled={isPending}>
               {isPending ? "Saving..." : "Save targets"}
             </Button>
-            <Button variant="ghost" className="text-muted-foreground">
+            <Button
+              variant="ghost"
+              className="text-muted-foreground"
+              onClick={() => {
+                set("titles", "Senior Product Manager, Group PM, Principal PM")
+                set("locations", "Remote (US), New York, San Francisco")
+                set("salary", [190, 270])
+              }}
+            >
               Reset
             </Button>
           </Field>
@@ -198,43 +243,17 @@ function JobTargetsTab({
   )
 }
 
-function DealbreakersTab({
-  initialDirectives,
-}: {
-  initialDirectives: DirectivesDoc | null
-}) {
-  const [dream, setDream] = useState<string[]>(
-    initialDirectives?.dreamCompanies ?? [
-      "Linear",
-      "Vercel",
-      "Stripe",
-      "Notion",
-      "Figma",
-    ]
-  )
-  const [anti, setAnti] = useState<string[]>(
-    initialDirectives?.dealbreakers ?? [
-      "Exclude Fintech",
-      "No strict RTO",
-      "No pre-seed startups",
-    ]
-  )
+// ---------------------------------------------------------------------------
+// Dealbreakers tab
+// ---------------------------------------------------------------------------
+
+function DealbreakersTab({ state, set, buildPayload }: TabProps) {
   const [isPending, startTransition] = useTransition()
 
   const save = () => {
     startTransition(async () => {
       try {
-        await saveDirectives({
-          titles: initialDirectives?.titles ?? [],
-          locations: initialDirectives?.locations ?? [],
-          salaryMin: initialDirectives?.salaryMin ?? 190,
-          salaryMax: initialDirectives?.salaryMax ?? 270,
-          remoteOnly: initialDirectives?.remoteOnly ?? false,
-          dreamCompanies: dream,
-          dealbreakers: anti,
-          resumeText: initialDirectives?.resumeText ?? "",
-          linkedinUrl: initialDirectives?.linkedinUrl ?? "",
-        })
+        await saveDirectives(buildPayload())
         toast.success("Dealbreakers saved")
       } catch {
         toast.error("Failed to save — check your MongoDB connection")
@@ -261,8 +280,8 @@ function DealbreakersTab({
           </CardHeader>
           <CardContent>
             <TagInput
-              tags={dream}
-              onChange={setDream}
+              tags={state.dreamCompanies}
+              onChange={(tags) => set("dreamCompanies", tags)}
               placeholder="Add a company..."
               tone="primary"
               icon={Briefcase}
@@ -286,8 +305,8 @@ function DealbreakersTab({
           </CardHeader>
           <CardContent>
             <TagInput
-              tags={anti}
-              onChange={setAnti}
+              tags={state.dealbreakers}
+              onChange={(tags) => set("dealbreakers", tags)}
               placeholder="Add a dealbreaker..."
               tone="destructive"
               icon={X}
@@ -304,6 +323,155 @@ function DealbreakersTab({
     </div>
   )
 }
+
+// ---------------------------------------------------------------------------
+// Resume & Profile tab
+// ---------------------------------------------------------------------------
+
+function ResumeTab({ state, set, buildPayload }: TabProps) {
+  const [isPending, startTransition] = useTransition()
+
+  const save = () => {
+    startTransition(async () => {
+      try {
+        await saveDirectives(buildPayload())
+        toast.success("Profile saved")
+      } catch {
+        toast.error("Failed to save — check your MongoDB connection")
+      }
+    })
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Personal info */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <User className="size-4" />
+            </span>
+            <div>
+              <CardTitle className="text-base">Your Profile</CardTitle>
+              <CardDescription>
+                Used in cover letters and outreach messages generated by your agents.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="name">Full name</FieldLabel>
+              <Input
+                id="name"
+                placeholder="e.g. Alex Rivera"
+                value={state.name}
+                onChange={(e) => set("name", e.target.value)}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="headline">Professional headline</FieldLabel>
+              <Input
+                id="headline"
+                placeholder="e.g. Senior Product Manager · 8 years · B2B SaaS"
+                value={state.headline}
+                onChange={(e) => set("headline", e.target.value)}
+              />
+              <FieldDescription>
+                Your agents use this as a one-line summary when reaching out to hiring managers.
+              </FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="linkedin">LinkedIn profile URL</FieldLabel>
+              <div className="relative">
+                <Link2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="linkedin"
+                  className="pl-9"
+                  placeholder="linkedin.com/in/yourprofile"
+                  value={state.linkedinUrl}
+                  onChange={(e) => set("linkedinUrl", e.target.value)}
+                />
+              </div>
+            </Field>
+          </FieldGroup>
+        </CardContent>
+      </Card>
+
+      {/* Resume upload */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Master Resume</CardTitle>
+          <CardDescription>
+            Your resume trains the Resume Scorer Agent&apos;s matching logic.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="resume-upload">Upload resume</FieldLabel>
+              <label
+                htmlFor="resume-upload"
+                className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-6 py-10 text-center transition-colors hover:border-primary/50 hover:bg-accent/30"
+              >
+                <span className="flex size-12 items-center justify-center rounded-full bg-accent text-primary">
+                  <UploadCloud className="size-6" />
+                </span>
+                <span className="text-sm font-medium text-foreground">
+                  Drag &amp; drop your resume, or click to browse
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  PDF or DOCX, up to 10MB
+                </span>
+                <input
+                  id="resume-upload"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) {
+                      set("resumeFileName", f.name)
+                      toast.success("Resume ready to save", { description: f.name })
+                    }
+                  }}
+                />
+              </label>
+              {state.resumeFileName && (
+                <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2.5">
+                  <span className="flex items-center gap-2 text-sm text-foreground">
+                    <FileText className="size-4 text-primary" />
+                    {state.resumeFileName}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground"
+                    aria-label="Remove resume"
+                    onClick={() => set("resumeFileName", "")}
+                  >
+                    <X />
+                  </Button>
+                </div>
+              )}
+            </Field>
+
+            <Field orientation="horizontal">
+              <Button onClick={save} disabled={isPending}>
+                {isPending ? "Saving..." : "Save profile"}
+              </Button>
+            </Field>
+          </FieldGroup>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// TagInput
+// ---------------------------------------------------------------------------
 
 function TagInput({
   tags,
@@ -382,123 +550,5 @@ function TagInput({
         ))}
       </div>
     </div>
-  )
-}
-
-function ResumeTab({
-  initialDirectives,
-}: {
-  initialDirectives: DirectivesDoc | null
-}) {
-  const [fileName, setFileName] = useState<string | null>(
-    "alex-rivera-resume-2026.pdf"
-  )
-  const [linkedin, setLinkedin] = useState(
-    initialDirectives?.linkedinUrl ?? "linkedin.com/in/alexrivera"
-  )
-  const [isPending, startTransition] = useTransition()
-
-  const save = () => {
-    startTransition(async () => {
-      try {
-        await saveDirectives({
-          titles: initialDirectives?.titles ?? [],
-          locations: initialDirectives?.locations ?? [],
-          salaryMin: initialDirectives?.salaryMin ?? 190,
-          salaryMax: initialDirectives?.salaryMax ?? 270,
-          remoteOnly: initialDirectives?.remoteOnly ?? false,
-          dreamCompanies: initialDirectives?.dreamCompanies ?? [],
-          dealbreakers: initialDirectives?.dealbreakers ?? [],
-          resumeText: initialDirectives?.resumeText ?? "",
-          linkedinUrl: linkedin,
-        })
-        toast.success("Profile saved")
-      } catch {
-        toast.error("Failed to save — check your MongoDB connection")
-      }
-    })
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Resume &amp; Profile</CardTitle>
-        <CardDescription>
-          Your master resume trains the Resume Scorer Agent&apos;s matching.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="resume-upload">Master resume</FieldLabel>
-            <label
-              htmlFor="resume-upload"
-              className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-background/40 px-6 py-10 text-center transition-colors hover:border-primary/50 hover:bg-accent/30"
-            >
-              <span className="flex size-12 items-center justify-center rounded-full bg-accent text-primary">
-                <UploadCloud className="size-6" />
-              </span>
-              <span className="text-sm font-medium text-foreground">
-                Drag &amp; drop your resume, or click to browse
-              </span>
-              <span className="text-xs text-muted-foreground">
-                PDF or DOCX, up to 10MB
-              </span>
-              <input
-                id="resume-upload"
-                type="file"
-                accept=".pdf,.doc,.docx"
-                className="sr-only"
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (f) {
-                    setFileName(f.name)
-                    toast.success("Resume uploaded", { description: f.name })
-                  }
-                }}
-              />
-            </label>
-            {fileName && (
-              <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2.5">
-                <span className="flex items-center gap-2 text-sm text-foreground">
-                  <FileText className="size-4 text-primary" />
-                  {fileName}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground"
-                  aria-label="Remove resume"
-                  onClick={() => setFileName(null)}
-                >
-                  <X />
-                </Button>
-              </div>
-            )}
-          </Field>
-
-          <Separator />
-
-          <Field>
-            <FieldLabel htmlFor="linkedin">LinkedIn profile</FieldLabel>
-            <div className="relative">
-              <Link2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                id="linkedin"
-                className="pl-9"
-                value={linkedin}
-                onChange={(e) => setLinkedin(e.target.value)}
-              />
-            </div>
-          </Field>
-
-          <Field orientation="horizontal">
-            <Button onClick={save} disabled={isPending}>
-              {isPending ? "Saving..." : "Save profile"}
-            </Button>
-          </Field>
-        </FieldGroup>
-      </CardContent>
-    </Card>
   )
 }

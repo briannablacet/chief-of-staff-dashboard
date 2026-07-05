@@ -11,6 +11,8 @@ import { archiveMatches } from "@/lib/cos-data"
 export type DirectivesDoc = {
   _id?: string
   userId: string
+  name: string
+  headline: string
   titles: string[]
   locations: string[]
   salaryMin: number
@@ -19,6 +21,7 @@ export type DirectivesDoc = {
   dreamCompanies: string[]
   dealbreakers: string[]
   resumeText: string
+  resumeFileName: string
   linkedinUrl: string
   updatedAt: Date
 }
