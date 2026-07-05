@@ -26,7 +26,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { updateMatchStatus, regenerateMatches, type MatchDoc } from "@/lib/actions"
+import { Input } from "@/components/ui/input"
+import { updateMatchStatus, regenerateMatches, saveJobUrl, type MatchDoc } from "@/lib/actions"
 import { cn } from "@/lib/utils"
 
 const statusStyles: Record<MatchDoc["status"], string> = {
@@ -183,6 +184,8 @@ function MatchDetail({
 }) {
   const [copied, setCopied] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [jobUrl, setJobUrl] = useState(match.jobUrl ?? "")
+  const [savingUrl, setSavingUrl] = useState(false)
 
   const copyLetter = async () => {
     try {
@@ -301,28 +304,54 @@ function MatchDetail({
         </div>
       </ScrollArea>
 
-      <SheetFooter className="flex-row gap-2 border-t border-border">
-        {match.jobUrl ? (
-          <Button className="flex-1" asChild>
-            <a href={match.jobUrl} target="_blank" rel="noopener noreferrer">
+      <SheetFooter className="flex-col gap-3 border-t border-border">
+        <div className="flex w-full items-center gap-2">
+          <Input
+            placeholder="Paste job listing URL..."
+            value={jobUrl}
+            onChange={(e) => setJobUrl(e.target.value)}
+            className="flex-1 text-sm"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={savingUrl || jobUrl === (match.jobUrl ?? "")}
+            onClick={async () => {
+              setSavingUrl(true)
+              try {
+                await saveJobUrl(match.matchId, jobUrl)
+                toast.success("Job link saved")
+              } catch {
+                toast.error("Failed to save link")
+              } finally {
+                setSavingUrl(false)
+              }
+            }}
+          >
+            {savingUrl ? "Saving..." : "Save"}
+          </Button>
+        </div>
+        <div className="flex w-full gap-2">
+          <Button className="flex-1" asChild disabled={!jobUrl}>
+            <a
+              href={jobUrl || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => { if (!jobUrl) e.preventDefault() }}
+            >
               <ExternalLink data-icon="inline-start" />
               Apply for this role
             </a>
           </Button>
-        ) : (
-          <Button className="flex-1" variant="outline" disabled>
-            <ExternalLink data-icon="inline-start" />
-            No job link yet
+          <Button variant="outline" onClick={copyLetter}>
+            {copied ? (
+              <Check data-icon="inline-start" />
+            ) : (
+              <Copy data-icon="inline-start" />
+            )}
+            Copy letter
           </Button>
-        )}
-        <Button variant="outline" onClick={copyLetter}>
-          {copied ? (
-            <Check data-icon="inline-start" />
-          ) : (
-            <Copy data-icon="inline-start" />
-          )}
-          Copy letter
-        </Button>
+        </div>
       </SheetFooter>
     </>
   )
