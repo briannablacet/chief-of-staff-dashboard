@@ -193,6 +193,8 @@ function MatchDetail({
   // Populate the contentEditable with paragraph elements when entering edit mode
   useEffect(() => {
     if (editingLetter && editorRef.current) {
+      // Force browser to use <p> on Enter, not <div>
+      document.execCommand('defaultParagraphSeparator', false, 'p')
       editorRef.current.innerHTML = coverLetter
         .split(/\n\n+/)
         .map((p) => `<p>${p.replace(/\n/g, "<br>") || "<br>"}</p>`)
@@ -257,9 +259,10 @@ function MatchDetail({
             onInput={syncFromEditor}
             onBlur={() => { syncFromEditor(); handleLetterBlur() }}
             className={[
-              "min-h-[520px] w-full rounded-md border border-border bg-background px-5 py-5",
+              "min-h-[520px] w-full rounded-md border border-border bg-background px-6 py-6",
               "text-sm text-foreground outline-none focus:ring-2 focus:ring-ring",
-              "[&_p]:mb-6 [&_p]:leading-7 [&_p:last-child]:mb-0",
+              "[&_p]:mb-8 [&_p]:leading-8 [&_p:last-child]:mb-0",
+              "[&_div]:mb-8 [&_div]:leading-8 [&_div:last-child]:mb-0",
               "empty:before:text-muted-foreground empty:before:content-['Your_cover_letter_will_appear_here...']",
             ].join(" ")}
           />
