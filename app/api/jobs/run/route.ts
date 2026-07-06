@@ -46,7 +46,7 @@ export async function POST(_req: NextRequest) {
       salaryMin = 0,
       dealbreakers = [],
       dailyMatchLimit = 10,
-      minMatchScore = 60,
+      minMatchScore = 30,
       resumeText = "",
       resumes = [],
       name: userName = "the applicant",
@@ -79,6 +79,8 @@ export async function POST(_req: NextRequest) {
     const allJobs: RawJob[] = [...adzunaJobs, ...remotiveJobs]
     const newJobs = allJobs.filter((j) => !existingIds.has(j.sourceId))
 
+    console.log("[v0] Pipeline: titles=", titles, "adzuna=", adzunaJobs.length, "remotive=", remotiveJobs.length, "new=", newJobs.length, "minScore=", minMatchScore)
+
     if (!newJobs.length) {
       await recordLastRun(db)
       return NextResponse.json({ saved: 0, message: "No new jobs found" })
@@ -92,6 +94,7 @@ export async function POST(_req: NextRequest) {
     for (const job of newJobs.slice(0, dailyMatchLimit * 4)) {
       const result = scoreJobKeywords(job, directives)
       if (!result) continue
+      console.log("[v0] Job:", job.title, "@", job.company, "score=", result.score, result.score < minMatchScore ? "(FILTERED)" : "(PASS)")
       if (result.score < minMatchScore) continue
 
       // Dealbreaker filter
@@ -167,6 +170,10 @@ function scoreJobKeywords(
   let score = 0
 
   // ── Title match (40 pts) ───────────────────────────────────────────────────
+  // Check for exact title phrase match first (full 40 pts)
+  const exactTitleMatch = titles.some((t) => titleLower.includes(t.toLowerCase()))
+
+  // Then keyword overlap as fallback
   const titleKeywords = titles.flatMap((t) =>
     t.toLowerCase().split(/\s+/).filter((w) => w.length > 3)
   )
@@ -174,9 +181,11 @@ function scoreJobKeywords(
   const matchedKeywords = uniqueKeywords.filter(
     (kw) => titleLower.includes(kw) || descLower.includes(kw)
   )
-  const titleScore = Math.min(40, Math.round((matchedKeywords.length / Math.max(uniqueKeywords.length, 1)) * 40))
+  // Give full points for exact match, partial for keyword overlap
+  const keywordRatio = matchedKeywords.length / Math.max(uniqueKeywords.length, 1)
+  const titleScore = exactTitleMatch ? 40 : Math.min(40, Math.round(keywordRatio * 50))
   score += titleScore
-  const titleMet = titleScore >= 20
+  const titleMet = titleScore >= 15
   breakdown.push({
     label: "Title alignment",
     met: titleMet,
