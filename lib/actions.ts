@@ -2,6 +2,8 @@
 
 import { getDb } from "@/lib/mongodb"
 import { revalidatePath } from "next/cache"
+import { auth } from "@/lib/auth"
+import { headers } from "next/headers"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -84,9 +86,11 @@ export type AgentDoc = {
   updatedAt: Date
 }
 
-// For now every user shares the same singleton doc — swap "default" for a
-// real user ID once you add auth.
-const USER_ID = "default"
+async function getUserId(): Promise<string> {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user) throw new Error("Unauthorized")
+  return session.user.id
+}
 
 // ---------------------------------------------------------------------------
 // Directives
@@ -94,10 +98,11 @@ const USER_ID = "default"
 
 export async function getDirectives(): Promise<DirectivesDoc | null> {
   try {
+    const userId = await getUserId()
     const db = await getDb()
     const doc = await db
       .collection<DirectivesDoc>("directives")
-      .findOne({ userId: USER_ID })
+      .findOne({ userId })
     if (!doc) return null
     return { ...doc, _id: doc._id?.toString() }
   } catch (err) {
@@ -109,15 +114,16 @@ export async function getDirectives(): Promise<DirectivesDoc | null> {
 export async function saveDirectives(
   data: Omit<DirectivesDoc, "_id" | "userId" | "updatedAt">
 ): Promise<void> {
+  const userId = await getUserId()
   const db = await getDb()
   // Destructure out _id in case the caller accidentally passed it through
   const { _id, ...safeData } = data as DirectivesDoc
   await db.collection<DirectivesDoc>("directives").updateOne(
-    { userId: USER_ID },
+    { userId },
     {
       $set: {
         ...safeData,
-        userId: USER_ID,
+        userId,
         updatedAt: new Date(),
       },
     },
@@ -127,14 +133,15 @@ export async function saveDirectives(
 }
 
 export async function saveResumeEntry(entry: ResumeEntry): Promise<void> {
+  const userId = await getUserId()
   const db = await getDb()
-  const doc = await db.collection<DirectivesDoc>("directives").findOne({ userId: USER_ID })
+  const doc = await db.collection<DirectivesDoc>("directives").findOne({ userId })
   const existing: ResumeEntry[] = doc?.resumes ?? (doc?.resumeText ? [{ id: "default", label: "My Résumé", text: doc.resumeText, fileName: doc.resumeFileName ?? "", isDefault: true }] : [])
   const updated = existing.some((r) => r.id === entry.id)
     ? existing.map((r) => r.id === entry.id ? entry : r)
     : [...existing, entry]
   await db.collection<DirectivesDoc>("directives").updateOne(
-    { userId: USER_ID },
+    { userId },
     { $set: { resumes: updated, updatedAt: new Date() } },
     { upsert: true }
   )
@@ -147,10 +154,11 @@ export async function saveResumeEntry(entry: ResumeEntry): Promise<void> {
 
 export async function getAgentConfigs(): Promise<AgentDoc[]> {
   try {
+    const userId = await getUserId()
     const db = await getDb()
     const docs = await db
       .collection<AgentDoc>("agents")
-      .find({ userId: USER_ID })
+      .find({ userId })
       .toArray()
     return docs.map((d) => ({ ...d, _id: d._id?.toString() }))
   } catch (err) {
@@ -163,13 +171,14 @@ export async function saveAgentConfig(
   agentId: string,
   patch: { enabled?: boolean; systemPrompt?: string }
 ): Promise<void> {
+  const userId = await getUserId()
   const db = await getDb()
   await db.collection<AgentDoc>("agents").updateOne(
-    { userId: USER_ID, agentId },
+    { userId, agentId },
     {
       $set: {
         ...patch,
-        userId: USER_ID,
+        userId,
         agentId,
         updatedAt: new Date(),
       },
@@ -180,18 +189,20 @@ export async function saveAgentConfig(
 }
 
 export async function saveResumeForMatch(matchId: string, resumeId: string): Promise<void> {
+  const userId = await getUserId()
   const db = await getDb()
   await db.collection<MatchDoc>("matches").updateOne(
-    { userId: USER_ID, matchId },
+    { userId, matchId },
     { $set: { resumeId, updatedAt: new Date() } }
   )
   revalidatePath("/")
 }
 
 export async function saveCoverLetter(matchId: string, coverLetter: string): Promise<void> {
+  const userId = await getUserId()
   const db = await getDb()
   await db.collection<MatchDoc>("matches").updateOne(
-    { userId: USER_ID, matchId },
+    { userId, matchId },
     { $set: { coverLetter, updatedAt: new Date() } }
   )
   revalidatePath("/")
@@ -203,10 +214,11 @@ export async function saveCoverLetter(matchId: string, coverLetter: string): Pro
 
 export async function getCoverLetters(): Promise<CoverLetterEntry[]> {
   try {
+    const userId = await getUserId()
     const db = await getDb()
     const docs = await db
       .collection<CoverLetterEntry>("cover_letters")
-      .find({ userId: USER_ID })
+      .find({ userId })
       .sort({ updatedAt: -1 })
       .toArray()
     return docs.map((d) => ({ ...d, _id: d._id?.toString() }))
@@ -218,12 +230,13 @@ export async function getCoverLetters(): Promise<CoverLetterEntry[]> {
 export async function saveCoverLetterToLibrary(
   entry: Pick<CoverLetterEntry, "id" | "name" | "text" | "matchId">
 ): Promise<void> {
+  const userId = await getUserId()
   const db = await getDb()
   await db.collection<CoverLetterEntry>("cover_letters").updateOne(
-    { userId: USER_ID, id: entry.id },
+    { userId, id: entry.id },
     {
       $set: {
-        userId: USER_ID,
+        userId,
         id: entry.id,
         name: entry.name,
         text: entry.text,
@@ -237,17 +250,19 @@ export async function saveCoverLetterToLibrary(
 }
 
 export async function deleteCoverLetterFromLibrary(id: string): Promise<void> {
+  const userId = await getUserId()
   const db = await getDb()
   await db
     .collection<CoverLetterEntry>("cover_letters")
-    .deleteOne({ userId: USER_ID, id })
+    .deleteOne({ userId, id })
   revalidatePath("/")
 }
 
 export async function saveJobUrl(matchId: string, jobUrl: string): Promise<void> {
+  const userId = await getUserId()
   const db = await getDb()
   await db.collection<MatchDoc>("matches").updateOne(
-    { userId: USER_ID, matchId },
+    { userId, matchId },
     { $set: { jobUrl, updatedAt: new Date() } }
   )
   revalidatePath("/")
@@ -259,14 +274,11 @@ export async function saveJobUrl(matchId: string, jobUrl: string): Promise<void>
 
 export async function getMatches(): Promise<MatchDoc[]> {
   try {
+    const userId = await getUserId()
     const db = await getDb()
-    const count = await db
-      .collection<MatchDoc>("matches")
-      .countDocuments({ userId: USER_ID })
-
     const docs = await db
       .collection<MatchDoc>("matches")
-      .find({ userId: USER_ID })
+      .find({ userId })
       .sort({ score: -1 })
       .toArray()
 
@@ -344,11 +356,12 @@ export async function updateMatchStatus(
   status: MatchDoc["status"] | undefined,
   patch?: { notes?: string; appliedAt?: Date }
 ): Promise<void> {
+  const userId = await getUserId()
   const db = await getDb()
   const update: Partial<MatchDoc> = { updatedAt: new Date(), ...patch }
   if (status !== undefined) update.status = status
   await db.collection<MatchDoc>("matches").updateOne(
-    { userId: USER_ID, matchId },
+    { userId, matchId },
     { $set: update }
   )
   revalidatePath("/")
@@ -357,10 +370,11 @@ export async function updateMatchStatus(
 export async function saveManualMatch(
   data: Pick<MatchDoc, "company" | "role" | "location" | "workModel" | "salary" | "jobUrl" | "jobReqContent" | "notes">
 ): Promise<void> {
+  const userId = await getUserId()
   const db = await getDb()
   const matchId = `manual:${Date.now()}`
   await db.collection<MatchDoc>("matches").insertOne({
-    userId: USER_ID,
+    userId,
     matchId,
     company: data.company,
     role: data.role,
@@ -382,7 +396,8 @@ export async function saveManualMatch(
 }
 
 export async function deleteMatch(matchId: string): Promise<void> {
+  const userId = await getUserId()
   const db = await getDb()
-  await db.collection<MatchDoc>("matches").deleteOne({ userId: USER_ID, matchId })
+  await db.collection<MatchDoc>("matches").deleteOne({ userId, matchId })
   revalidatePath("/")
 }

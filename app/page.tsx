@@ -1,9 +1,15 @@
 import { getDirectives, getAgentConfigs, getMatches, getCoverLetters } from "@/lib/actions"
 import { Dashboard } from "@/components/cos/dashboard"
+import { auth } from "@/lib/auth"
+import { headers } from "next/headers"
+import { redirect } from "next/navigation"
 
 export const dynamic = "force-dynamic"
 
 export default async function Page() {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user) redirect("/sign-in")
+
   const [directives, agentConfigs, matches, coverLetters] = await Promise.all([
     getDirectives(),
     getAgentConfigs(),
@@ -28,6 +34,7 @@ export default async function Page() {
       initialCoverLetters={coverLetters}
       appUrl={appUrl}
       bookmarkletSecret={bookmarkletSecret}
+      user={{ name: session.user.name, email: session.user.email }}
     />
   )
 }
