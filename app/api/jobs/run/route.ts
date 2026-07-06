@@ -65,11 +65,13 @@ export async function POST(_req: NextRequest) {
     const resumeForCoverLetter = defaultResume?.text || resumeText
 
     // ------------------------------------------------------------------
-    // 2. Load existing match sourceIds to deduplicate
+    // 2. Load existing match IDs — only skip jobs seen in the last 7 days.
+    //    Older matches are stale and can be refreshed.
     // ------------------------------------------------------------------
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const existing = await db
       .collection<MatchDoc>("matches")
-      .find({ userId: USER_ID }, { projection: { matchId: 1 } })
+      .find({ userId: USER_ID, updatedAt: { $gte: sevenDaysAgo } }, { projection: { matchId: 1 } })
       .toArray()
     const existingIds = new Set(existing.map((m) => m.matchId))
 
@@ -141,10 +143,14 @@ export async function POST(_req: NextRequest) {
     }
 
     // ------------------------------------------------------------------
-    // 7. Save to MongoDB
+    // 7. Save to MongoDB — upsert so re-runs update stale matches
     // ------------------------------------------------------------------
-    if (withLetters.length) {
-      await db.collection<MatchDoc>("matches").insertMany(withLetters)
+    for (const match of withLetters) {
+      await db.collection<MatchDoc>("matches").updateOne(
+        { userId: USER_ID, matchId: match.matchId },
+        { $set: match },
+        { upsert: true }
+      )
     }
 
     await recordLastRun(db)
