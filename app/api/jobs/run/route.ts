@@ -200,18 +200,32 @@ function scoreJobKeywords(
     locationLower.includes("remote") ||
     descLower.includes("fully remote") ||
     descLower.includes("work from home") ||
-    descLower.includes("100% remote")
+    descLower.includes("100% remote") ||
+    descLower.includes("remote-first") ||
+    descLower.includes("remote first") ||
+    descLower.includes("distributed team") ||
+    descLower.includes("anywhere in the us") ||
+    descLower.includes("anywhere in us")
 
-  if (remoteOnly) {
+  // Treat any location containing "remote" as a remote preference
+  const prefersRemote =
+    remoteOnly || locations.some((loc) => loc.toLowerCase().includes("remote"))
+
+  // Non-remote city preferences (exclude remote entries)
+  const cityLocations = locations.filter(
+    (loc) => !loc.toLowerCase().includes("remote")
+  )
+
+  if (prefersRemote) {
     const met = isRemoteJob
     score += met ? 20 : 0
     breakdown.push({
       label: "Remote work",
       met,
-      note: met ? "Position is remote" : "Position may not be remote",
+      note: met ? "Position is remote" : "Position does not appear to be remote",
     })
-  } else if (locations.length) {
-    const locationMatch = locations.some(
+  } else if (cityLocations.length) {
+    const locationMatch = cityLocations.some(
       (loc) =>
         locationLower.includes(loc.toLowerCase()) ||
         descLower.includes(loc.toLowerCase())
@@ -222,8 +236,8 @@ function scoreJobKeywords(
       label: "Location",
       met,
       note: met
-        ? isRemoteJob ? "Remote position" : `Matches ${locations[0]}`
-        : `Looking for ${locations.slice(0, 2).join(" or ")}`,
+        ? isRemoteJob ? "Remote position" : `Matches ${cityLocations[0]}`
+        : `Looking for ${cityLocations.slice(0, 2).join(" or ")}`,
     })
   } else {
     score += 15 // no location preference = neutral
