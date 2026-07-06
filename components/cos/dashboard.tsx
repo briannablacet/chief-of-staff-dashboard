@@ -138,7 +138,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
             } initialCoverLetters={initialCoverLetters} />}
           {view === "thought-leadership" && <ThoughtLeadership targetTitles={initialDirectives?.titles} targetCompanies={initialDirectives?.dreamCompanies} />}
           {view === "resumes" && <Resumes initialDirectives={initialDirectives} />}
-          {view === "agents" && <AgentsTab initialAgentConfigs={initialAgentConfigs} />}
+          {view === "agents" && <AgentsTab initialAgentConfigs={initialAgentConfigs} onNavigate={navigate} />}
           {view === "tracker" && <Tracker initialMatches={initialMatches} />}
           {view === "bookmarklet" && <Bookmarklet appUrl={appUrl} secret={bookmarkletSecret} />}
         </main>

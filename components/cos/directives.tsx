@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Target, Ban, FileText, Building2, MapPin, Link2, Plus, X, UploadCloud, User, Terminal, Play, Loader2 } from "lucide-react"
+import { Target, Ban, FileText, Building2, MapPin, Link2, Plus, X, UploadCloud, User, Terminal, Play, Loader2, Bookmark } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { saveDirectives, saveAgentConfig } from "@/lib/actions"
@@ -624,7 +624,7 @@ function ResumesTab({ state, set, buildPayload }: TabProps) {
   )
 }
 
-export function AgentsTab({ initialAgentConfigs }: { initialAgentConfigs: AgentDoc[] }) {
+export function AgentsTab({ initialAgentConfigs, onNavigate }: { initialAgentConfigs: AgentDoc[]; onNavigate?: (view: string) => void }) {
   const [paused, setPaused] = useState<Record<AgentKey, boolean>>(() => {
     const map: Record<string, boolean> = {}
     for (const cfg of initialAgentConfigs) map[cfg.agentId] = !cfg.enabled
@@ -775,6 +775,30 @@ export function AgentsTab({ initialAgentConfigs }: { initialAgentConfigs: AgentD
           </Card>
         )
       })}
+
+      {/* Job Capture bookmarklet callout */}
+      <Card className="xl:col-span-2 border-primary/20 bg-primary/5">
+        <CardContent className="flex items-center justify-between gap-4 py-4">
+          <div className="flex items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <Bookmark className="size-5" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Job Capture Bookmarklet</p>
+              <p className="text-xs text-muted-foreground">Save any job listing in one click — it gets imported with a tailored cover letter automatically.</p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => onNavigate?.("bookmarklet")}
+          >
+            <Bookmark className="size-3.5" data-icon="inline-start" />
+            Set up bookmarklet
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   )
 }
