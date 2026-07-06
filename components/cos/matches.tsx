@@ -473,23 +473,18 @@ function MatchDetail({
           </span>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
-          <button
-            onClick={() => {
-              const url = match.jobUrl ?? `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(match.role)}&company=${encodeURIComponent(match.company)}&f_TPR=r604800`
-              window.open(url, "_blank", "noopener,noreferrer")
-            }}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            <ExternalLink className="size-4" />
-            {match.jobUrl ? "View job listing" : "Find on LinkedIn"}
-          </button>
-          <p className="text-sm text-muted-foreground">
-            {match.jobUrl
-              ? "Opens the original job listing."
-              : `Searches LinkedIn for this role at ${match.company}.`}
-          </p>
-        </div>
+        {match.jobUrl && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+            <button
+              onClick={() => window.open(match.jobUrl!, "_blank", "noopener,noreferrer")}
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <ExternalLink className="size-4" />
+              View job listing
+            </button>
+            <p className="text-sm text-muted-foreground">Opens the original job listing.</p>
+          </div>
+        )}
       </Card>
 
       {/* Job description + inline score breakdown */}
