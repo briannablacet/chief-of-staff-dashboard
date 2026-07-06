@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { saveDirectives, type DirectivesDoc, type ResumeEntry } from "@/lib/actions"
 import { parseResumeFile } from "@/lib/parse-resume"
 import { runResumeAtsChecks } from "@/lib/ats-checker"
@@ -311,16 +311,15 @@ export function Resumes({ initialDirectives }: ResumesProps) {
               </div>
             )}
 
-            {/* Save buttons — always visible below ATS panel */}
-            <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-              <Button variant="outline" onClick={handleSave} disabled={isPending}>
-                {isPending ? "Saving..." : "Save résumé"}
-              </Button>
-              <Button onClick={handleSaveAndClose} disabled={isPending}>
-                {isPending ? "Saving..." : "Save and close"}
-              </Button>
-            </div>
           </CardContent>
+          <CardFooter className="flex items-center justify-end gap-2 border-t border-border">
+            <Button variant="outline" onClick={handleSave} disabled={isPending}>
+              {isPending ? "Saving..." : "Save résumé"}
+            </Button>
+            <Button onClick={handleSaveAndClose} disabled={isPending}>
+              {isPending ? "Saving..." : "Save and close"}
+            </Button>
+          </CardFooter>
         </Card>
       </div>
     )
