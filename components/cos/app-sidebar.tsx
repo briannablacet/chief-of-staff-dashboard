@@ -9,15 +9,17 @@ import {
   PenLine,
   Bot,
   FileText,
+  ClipboardList,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
-export type ViewKey = 'command' | 'staff' | 'directives' | 'matches' | 'thought-leadership' | 'agents' | 'resumes'
+export type ViewKey = 'command' | 'staff' | 'directives' | 'matches' | 'thought-leadership' | 'agents' | 'resumes' | 'tracker'
 
 const NAV: { key: ViewKey; label: string; sub: string; icon: typeof Inbox }[] = [
   { key: 'command',            label: 'Dashboard',              sub: 'Daily digest',          icon: LayoutDashboard },
   { key: 'matches',            label: 'Matches & Cover Letters', sub: 'Output archive',        icon: Inbox },
+  { key: 'tracker',            label: 'Application Tracker',   sub: 'History & pipeline',    icon: ClipboardList },
   { key: 'thought-leadership', label: 'Thought Leadership',     sub: 'LinkedIn post ideas',   icon: PenLine },
   { key: 'resumes',            label: 'Résumés',                sub: 'Manage your résumés',   icon: FileText },
   { key: 'directives',         label: 'Settings',               sub: 'Profile & preferences', icon: SlidersHorizontal },

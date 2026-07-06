@@ -50,7 +50,10 @@ export type MatchDoc = {
   workModel: "Remote" | "Hybrid" | "On-site"
   salary: string
   score: number
-  status: "New" | "Reviewed" | "Applied"
+  status: "New" | "Reviewing" | "Applied" | "Interviewing" | "Offer" | "Rejected"
+  appliedAt?: Date
+  notes?: string
+  source?: "agent" | "manual"
   postedAgo: string
   breakdown: { label: string; met: boolean; note: string }[]
   coverLetter: string
@@ -416,12 +419,48 @@ function role_label(title: string, suffix: string) {
 
 export async function updateMatchStatus(
   matchId: string,
-  status: "New" | "Reviewed" | "Applied"
+  status: MatchDoc["status"] | undefined,
+  patch?: { notes?: string; appliedAt?: Date }
 ): Promise<void> {
   const db = await getDb()
+  const update: Partial<MatchDoc> = { updatedAt: new Date(), ...patch }
+  if (status !== undefined) update.status = status
   await db.collection<MatchDoc>("matches").updateOne(
     { userId: USER_ID, matchId },
-    { $set: { status, updatedAt: new Date() } }
+    { $set: update }
   )
+  revalidatePath("/")
+}
+
+export async function saveManualMatch(
+  data: Pick<MatchDoc, "company" | "role" | "location" | "workModel" | "salary" | "jobUrl" | "jobReqContent" | "notes">
+): Promise<void> {
+  const db = await getDb()
+  const matchId = `manual:${Date.now()}`
+  await db.collection<MatchDoc>("matches").insertOne({
+    userId: USER_ID,
+    matchId,
+    company: data.company,
+    role: data.role,
+    location: data.location ?? "",
+    workModel: data.workModel ?? "On-site",
+    salary: data.salary ?? "",
+    score: 0,
+    status: "New",
+    source: "manual",
+    postedAgo: "Just added",
+    breakdown: [],
+    coverLetter: "",
+    jobUrl: data.jobUrl ?? "",
+    jobReqContent: data.jobReqContent ?? "",
+    notes: data.notes ?? "",
+    updatedAt: new Date(),
+  })
+  revalidatePath("/")
+}
+
+export async function deleteMatch(matchId: string): Promise<void> {
+  const db = await getDb()
+  await db.collection<MatchDoc>("matches").deleteOne({ userId: USER_ID, matchId })
   revalidatePath("/")
 }
