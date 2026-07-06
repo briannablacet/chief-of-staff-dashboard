@@ -9,6 +9,7 @@ import { Matches } from "@/components/cos/matches"
 import { ThoughtLeadership } from "@/components/cos/thought-leadership"
 import { Resumes } from "@/components/cos/resumes"
 import { Tracker } from "@/components/cos/tracker"
+import { Bookmarklet } from "@/components/cos/bookmarklet"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import type { DirectivesDoc, AgentDoc, MatchDoc, CoverLetterEntry } from "@/lib/actions"
@@ -22,6 +23,7 @@ const TITLES: Record<ViewKey, string> = {
   agents: "Agent Setup",
   resumes: "Résumés",
   tracker: "Application Tracker",
+  bookmarklet: "Job Capture Bookmarklet",
 }
 
 interface DashboardProps {
@@ -29,9 +31,11 @@ interface DashboardProps {
   initialAgentConfigs: AgentDoc[]
   initialMatches: MatchDoc[]
   initialCoverLetters: CoverLetterEntry[]
+  appUrl: string
+  bookmarkletSecret: string
 }
 
-export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatches, initialCoverLetters }: DashboardProps) {
+export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatches, initialCoverLetters, appUrl, bookmarkletSecret }: DashboardProps) {
   const [view, setView] = useState<ViewKey>("command")
   const [mobileNav, setMobileNav] = useState(false)
   const [directivesTab, setDirectivesTab] = useState<string | undefined>(undefined)
@@ -136,6 +140,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
           {view === "resumes" && <Resumes initialDirectives={initialDirectives} />}
           {view === "agents" && <AgentsTab initialAgentConfigs={initialAgentConfigs} />}
           {view === "tracker" && <Tracker initialMatches={initialMatches} />}
+          {view === "bookmarklet" && <Bookmarklet appUrl={appUrl} secret={bookmarkletSecret} />}
         </main>
       </div>
     </div>
