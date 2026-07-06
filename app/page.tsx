@@ -11,12 +11,18 @@ export default async function Page() {
     getCoverLetters(),
   ])
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+  const bookmarkletSecret = process.env.BOOKMARKLET_SECRET ?? "cos-import"
+
   return (
     <Dashboard
       initialDirectives={directives}
       initialAgentConfigs={agentConfigs}
       initialMatches={matches}
       initialCoverLetters={coverLetters}
+      appUrl={appUrl}
+      bookmarkletSecret={bookmarkletSecret}
     />
   )
 }
