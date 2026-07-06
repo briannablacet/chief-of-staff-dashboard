@@ -8,7 +8,7 @@ import {
   ExternalLink,
   Trash2,
   ChevronDown,
-  Linkedin,
+  Link2,
   Building2,
   MapPin,
   Calendar,
@@ -101,7 +101,7 @@ function AddJobDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
 
         {/* LinkedIn tip */}
         <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/40">
-          <Linkedin className="mt-0.5 size-4 shrink-0 text-blue-600" />
+          <Link2 className="mt-0.5 size-4 shrink-0 text-blue-600" />
           <p className="text-xs text-blue-700 dark:text-blue-300">
             <span className="font-semibold">LinkedIn jobs:</span> Open the job on LinkedIn, copy the URL into the field below, then paste the full job description into the description box. LinkedIn blocks automated scraping, so this is the fastest way to track those roles.
           </p>
