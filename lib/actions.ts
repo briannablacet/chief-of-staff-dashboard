@@ -264,11 +264,6 @@ export async function getMatches(): Promise<MatchDoc[]> {
       .collection<MatchDoc>("matches")
       .countDocuments({ userId: USER_ID })
 
-    // Seed from user's directives on first run
-    if (count === 0) {
-      await seedMatchesFromDirectives(db)
-    }
-
     const docs = await db
       .collection<MatchDoc>("matches")
       .find({ userId: USER_ID })
@@ -283,86 +278,9 @@ export async function getMatches(): Promise<MatchDoc[]> {
 }
 
 export async function regenerateMatches(): Promise<void> {
-  const db = await getDb()
-  await db.collection<MatchDoc>("matches").deleteMany({ userId: USER_ID })
-  await seedMatchesFromDirectives(db)
+  // Trigger a fresh pipeline run instead of seeding fake data
+  await fetch("/api/jobs/run", { method: "POST" })
   revalidatePath("/")
-}
-
-async function seedMatchesFromDirectives(db: Awaited<ReturnType<typeof getDb>>) {
-  const directives = await db
-    .collection<DirectivesDoc>("directives")
-    .findOne({ userId: USER_ID })
-
-  // Use saved titles/companies or fall back to generic defaults
-  const titles = directives?.titles?.length
-    ? directives.titles
-    : ["Product Manager", "Senior Product Manager"]
-
-  const dreamCompanies = directives?.dreamCompanies?.length
-    ? directives.dreamCompanies
-    : ["Linear", "Vercel", "Notion"]
-
-  const location = directives?.locations?.[0] ?? "Remote (US)"
-  // salary is stored as salaryMin/salaryMax fields
-  const salaryFloor = directives?.salaryMin ?? 190
-  const remoteOnly = directives?.remoteOnly ?? false
-  const name = directives?.name || "there"
-  const headline = directives?.headline ?? ""
-  const defaultCoverLetter = directives?.defaultCoverLetter ?? ""
-
-  const workModels: MatchDoc["workModel"][] = remoteOnly
-    ? ["Remote"]
-    : ["Remote", "Hybrid", "Remote", "Hybrid", "On-site"]
-
-  const companySuffixes = [
-    "Platform",
-    "Growth",
-    "Developer Experience",
-    "Core Product",
-    "AI",
-    "Enterprise",
-  ]
-
-  const seeds: Omit<MatchDoc, "_id">[] = dreamCompanies
-    .slice(0, 6)
-    .flatMap((company, ci) =>
-      titles.slice(0, 2).map((title, ti) => {
-        const suffix = companySuffixes[(ci * 2 + ti) % companySuffixes.length]
-        const score = 94 - ci * 3 - ti * 2
-        const salaryLow = salaryFloor + ci * 5 + ti * 10
-        const salaryHigh = salaryLow + 40
-        const wm = workModels[(ci + ti) % workModels.length]
-        const hoursAgo = (ci * 3 + ti + 1) * 2
-        return {
-          userId: USER_ID,
-          matchId: `m-${ci}-${ti}`,
-          company,
-          role: `${title}, ${suffix}`,
-          location: wm === "Remote" ? "Remote (US)" : location,
-          workModel: wm,
-          salary: `$${salaryLow}k – $${salaryHigh}k + equity`,
-          score,
-          status: "New" as const,
-          postedAgo: hoursAgo < 24 ? `${hoursAgo}h ago` : `${Math.round(hoursAgo / 24)}d ago`,
-          breakdown: [
-            { label: "Compensation", met: salaryLow >= salaryFloor, note: `${salaryLow >= salaryFloor ? "Above" : "Below"} $${salaryFloor}k floor` },
-            { label: "Work model", met: wm !== "On-site" || !remoteOnly, note: wm },
-            { label: "Title match", met: true, note: `Matches target: ${title}` },
-            { label: "Anti-List", met: true, note: "No dealbreakers triggered" },
-            { label: "Seniority", met: score >= 88, note: score >= 88 ? "Strong fit" : "Stretch role" },
-          ],
-          coverLetter: buildCoverLetter({ defaultCoverLetter, name, headline, company, title, suffix }),
-          jobUrl: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(title)}&company=${encodeURIComponent(company)}&f_TPR=r604800`,
-          jobReqContent: `${company} is looking for a ${title}, ${suffix} to join our growing team.\n\nAbout the role:\nAs a ${title} on the ${suffix} team, you will define and drive the product strategy for a critical part of our business. You'll work closely with engineering, design, and data to ship high-impact features.\n\nResponsibilities:\n• Define the product vision and roadmap for the ${suffix} area\n• Partner with engineering and design to deliver high-quality experiences\n• Use data and customer research to prioritize the highest-impact work\n• Communicate strategy and progress to leadership and stakeholders\n• Drive cross-functional alignment across product, eng, and go-to-market teams\n\nRequirements:\n• ${score >= 90 ? "7+" : "5+"} years of product management experience\n• Strong analytical and communication skills\n• Experience working on ${suffix.toLowerCase()} products at scale\n• ${wm === "Remote" ? "Comfortable working async in a distributed team" : `Based in or willing to relocate to ${location}`}\n\nCompensation: $${salaryLow}k – $${salaryHigh}k base + equity + benefits`,
-          updatedAt: new Date(),
-        }
-      })
-    )
-
-  if (seeds.length > 0) {
-    await db.collection<MatchDoc>("matches").insertMany(seeds)
-  }
 }
 
 function buildCoverLetter({
