@@ -278,8 +278,11 @@ export async function getMatches(): Promise<MatchDoc[]> {
 }
 
 export async function regenerateMatches(): Promise<void> {
-  // Trigger a fresh pipeline run instead of seeding fake data
-  await fetch("/api/jobs/run", { method: "POST" })
+  // Build absolute URL — required when calling fetch from a Server Action
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+  await fetch(`${base}/api/jobs/run`, { method: "POST" })
   revalidatePath("/")
 }
 
