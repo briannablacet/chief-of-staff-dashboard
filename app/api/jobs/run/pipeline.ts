@@ -52,24 +52,34 @@ export async function runJobPipeline(): Promise<{ saved: number; message?: strin
     updatedAt: { $lt: threeDaysAgo },
   })
 
-  // 3. Build dedup set from remaining agent matches
+  // 3. Build dedup sets from remaining agent matches — by matchId AND by company+role
   const existing = await db
     .collection<MatchDoc>("matches")
-    .find({ userId: USER_ID, matchId: /^adzuna:/ }, { projection: { matchId: 1 } })
+    .find({ userId: USER_ID, matchId: /^adzuna:/ }, { projection: { matchId: 1, company: 1, role: 1 } })
     .toArray()
   const existingIds = new Set(existing.map((m) => m.matchId))
+  // Adzuna often posts the same listing with different IDs — block by company+role too
+  const existingRoles = new Set(existing.map((m) => `${m.company}|${m.role}`.toLowerCase()))
 
   // 4. Fetch jobs
   const adzunaJobs = await fetchAdzunaJobs(titles, locations, remoteOnly, 40)
 
-  // Deduplicate within the current batch (same job from multiple title queries)
+  // Deduplicate within the current batch by sourceId AND by company+role
   const seenInBatch = new Set<string>()
+  const seenRolesInBatch = new Set<string>()
   const allJobs: RawJob[] = adzunaJobs.filter((j) => {
     if (seenInBatch.has(j.sourceId)) return false
+    const roleKey = `${j.company}|${j.title}`.toLowerCase()
+    if (seenRolesInBatch.has(roleKey)) return false
     seenInBatch.add(j.sourceId)
+    seenRolesInBatch.add(roleKey)
     return true
   })
-  const newJobs = allJobs.filter((j) => !existingIds.has(j.sourceId))
+  const newJobs = allJobs.filter((j) => {
+    if (existingIds.has(j.sourceId)) return false
+    if (existingRoles.has(`${j.company}|${j.title}`.toLowerCase())) return false
+    return true
+  })
 
   if (!newJobs.length) {
     await recordLastRun(db)
