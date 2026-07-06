@@ -10,13 +10,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { generateText } from "ai"
 import { getDb } from "@/lib/mongodb"
-import type { MatchDoc } from "@/lib/actions"
+import type { MatchDoc, DirectivesDoc } from "@/lib/actions"
 
 const USER_ID = "default"
 // Simple shared secret so random people can't post to this endpoint
 const BOOKMARKLET_SECRET = process.env.BOOKMARKLET_SECRET ?? "cos-import"
 
-export const maxDuration = 30
+export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   try {
@@ -76,6 +76,40 @@ Return ONLY valid JSON, no markdown, no explanation.`
     }
 
     const db = await getDb()
+
+    // Load directives for resume text and user name
+    const directives = await db
+      .collection<DirectivesDoc>("directives")
+      .findOne({ userId: USER_ID })
+
+    const userName = directives?.name || "the applicant"
+    const defaultResume = directives?.resumes?.find((r) => r.isDefault) ?? directives?.resumes?.[0]
+    const resumeText = defaultResume?.text || directives?.resumeText || ""
+
+    // Generate a cover letter using the job content
+    let coverLetter = ""
+    const jobContent = text.slice(0, 3000)
+    if (jobContent.length > 100) {
+      try {
+        const { text: cl } = await generateText({
+          model: "openai/gpt-4.1-nano",
+          system: `You write concise, compelling cover letters. Three short paragraphs maximum.
+No fluff. No "I am writing to express my interest." Start strong with a specific hook.
+Return only the letter text, no subject line.`,
+          prompt: `Write a cover letter for ${userName} applying to the ${role} role at ${company}.
+
+Job description:
+${jobContent}
+
+Candidate résumé:
+${resumeText.slice(0, 800)}`,
+        })
+        coverLetter = cl
+      } catch {
+        // Cover letter generation failed — save without it, user can regenerate
+      }
+    }
+
     const matchId = `manual:${Date.now()}`
 
     await db.collection<MatchDoc>("matches").insertOne({
@@ -91,14 +125,14 @@ Return ONLY valid JSON, no markdown, no explanation.`
       source: "manual",
       postedAgo: "Just added",
       breakdown: [],
-      coverLetter: "",
+      coverLetter,
       jobUrl: url,
       jobReqContent: text.slice(0, 10000),
       notes: "",
       updatedAt: new Date(),
     })
 
-    return NextResponse.json({ ok: true, role, company })
+    return NextResponse.json({ ok: true, role, company, hasCoverLetter: !!coverLetter })
   } catch (err) {
     console.error("[import-job]", err)
     return NextResponse.json({ error: "Internal error" }, { status: 500 })
