@@ -50,6 +50,7 @@ export async function POST(_req: NextRequest) {
       resumeText = "",
       resumes = [],
       name: userName = "the applicant",
+      defaultCoverLetter = "",
     } = directives
 
     // Cap at 50 — keyword scoring tops out lower than LLM scoring,
@@ -64,11 +65,13 @@ export async function POST(_req: NextRequest) {
     const resumeForCoverLetter = defaultResume?.text || resumeText
 
     // ------------------------------------------------------------------
-    // 2. Load existing match sourceIds to deduplicate
+    // 2. Load existing match IDs — only skip jobs seen in the last 7 days.
+    //    Older matches are stale and can be refreshed.
     // ------------------------------------------------------------------
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     const existing = await db
       .collection<MatchDoc>("matches")
-      .find({ userId: USER_ID }, { projection: { matchId: 1 } })
+      .find({ userId: USER_ID, updatedAt: { $gte: sevenDaysAgo } }, { projection: { matchId: 1 } })
       .toArray()
     const existingIds = new Set(existing.map((m) => m.matchId))
 
@@ -129,9 +132,10 @@ export async function POST(_req: NextRequest) {
     const withLetters: MatchDoc[] = []
     for (const { match } of scored) {
       try {
-        const letter = await generateCoverLetter(match, resumeForCoverLetter, userName)
+        const letter = await generateCoverLetter(match, resumeForCoverLetter, userName, defaultCoverLetter)
         withLetters.push({ ...match, coverLetter: letter })
-      } catch {
+      } catch (err) {
+        console.error("[jobs/run] Cover letter failed for", match.matchId, err)
         withLetters.push(match) // save without letter rather than skip entirely
       }
       // Respect rate limits between cover letter calls
@@ -139,10 +143,14 @@ export async function POST(_req: NextRequest) {
     }
 
     // ------------------------------------------------------------------
-    // 7. Save to MongoDB
+    // 7. Save to MongoDB — upsert so re-runs update stale matches
     // ------------------------------------------------------------------
-    if (withLetters.length) {
-      await db.collection<MatchDoc>("matches").insertMany(withLetters)
+    for (const match of withLetters) {
+      await db.collection<MatchDoc>("matches").updateOne(
+        { userId: USER_ID, matchId: match.matchId },
+        { $set: match },
+        { upsert: true }
+      )
     }
 
     await recordLastRun(db)
@@ -332,20 +340,46 @@ function scoreJobKeywords(
 async function generateCoverLetter(
   match: MatchDoc,
   resumeText: string,
-  userName: string
+  userName: string,
+  defaultCoverLetter: string
 ): Promise<string> {
-  const { text } = await generateText({
-    model: "openai/gpt-4.1-nano",
-    system: `You write concise, compelling cover letters. Three short paragraphs maximum. 
+  const hasTemplate = defaultCoverLetter.trim().length > 50
+
+  const system = hasTemplate
+    ? `You are a cover letter editor. Adapt the provided template for the specific role and company.
+Rules:
+- Keep the candidate's voice, tone, and structure from the template
+- Replace any placeholder variables like {{company}}, {{role}}, {{name}}, [Company], [Role] with the actual values
+- Tailor 1-2 sentences to reference something specific about the company or role
+- Do not add new paragraphs or change the overall length
+- Return only the final letter text, no subject line, no commentary`
+    : `You write concise, compelling cover letters. Three short paragraphs maximum.
 No fluff. No "I am writing to express my interest." Start strong with a specific hook.
-Return only the letter text, no subject line.`,
-    prompt: `Write a cover letter for ${userName} applying to the ${match.role} role at ${match.company}.
+Return only the letter text, no subject line.`
+
+  const prompt = hasTemplate
+    ? `Adapt this cover letter template for ${userName} applying to the ${match.role} role at ${match.company}.
+
+Template to adapt:
+${defaultCoverLetter}
+
+Job description (use for tailoring):
+${(match.jobReqContent ?? "").slice(0, 600)}
+
+Candidate résumé (for context):
+${resumeText.slice(0, 400)}`
+    : `Write a cover letter for ${userName} applying to the ${match.role} role at ${match.company}.
 
 Job description:
 ${(match.jobReqContent ?? "").slice(0, 800)}
 
 Candidate résumé:
-${resumeText.slice(0, 800)}`,
+${resumeText.slice(0, 800)}`
+
+  const { text } = await generateText({
+    model: "openai/gpt-4.1-nano",
+    system,
+    prompt,
   })
   return text
 }

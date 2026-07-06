@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import {
   Sparkles,
@@ -24,12 +24,6 @@ import { agents } from '@/lib/cos-data'
 import type { ViewKey } from './app-sidebar'
 import { cn } from '@/lib/utils'
 import { regenerateMatches, type MatchDoc } from '@/lib/actions'
-
-const today = new Date().toLocaleDateString('en-US', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-})
 
 export function CommandCenter({ onNavigate, onNavigateToMatch, profileName, initialMatches = [] }: { onNavigate: (v: ViewKey) => void; onNavigateToMatch?: (matchId: string) => void; profileName?: string; initialMatches?: MatchDoc[] }) {
   return (
@@ -91,6 +85,11 @@ export function CommandCenter({ onNavigate, onNavigateToMatch, profileName, init
 function DailyDigest({ onNavigate, onNavigateToMatch, profileName, initialMatches }: { onNavigate: (v: ViewKey) => void; onNavigateToMatch?: (matchId: string) => void; profileName?: string; initialMatches: MatchDoc[] }) {
   const [regenerating, setRegenerating] = useState(false)
   const [matches, setMatches] = useState<MatchDoc[]>(initialMatches)
+  const [today, setToday] = useState('')
+
+  useEffect(() => {
+    setToday(new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }))
+  }, [])
 
   const firstName = profileName?.split(' ')[0] ?? 'there'
   const topThree = matches.slice(0, 3)
