@@ -50,6 +50,7 @@ export async function POST(_req: NextRequest) {
       resumeText = "",
       resumes = [],
       name: userName = "the applicant",
+      defaultCoverLetter = "",
     } = directives
 
     // Cap at 50 — keyword scoring tops out lower than LLM scoring,
@@ -129,9 +130,10 @@ export async function POST(_req: NextRequest) {
     const withLetters: MatchDoc[] = []
     for (const { match } of scored) {
       try {
-        const letter = await generateCoverLetter(match, resumeForCoverLetter, userName)
+        const letter = await generateCoverLetter(match, resumeForCoverLetter, userName, defaultCoverLetter)
         withLetters.push({ ...match, coverLetter: letter })
-      } catch {
+      } catch (err) {
+        console.error("[jobs/run] Cover letter failed for", match.matchId, err)
         withLetters.push(match) // save without letter rather than skip entirely
       }
       // Respect rate limits between cover letter calls
@@ -332,20 +334,46 @@ function scoreJobKeywords(
 async function generateCoverLetter(
   match: MatchDoc,
   resumeText: string,
-  userName: string
+  userName: string,
+  defaultCoverLetter: string
 ): Promise<string> {
-  const { text } = await generateText({
-    model: "openai/gpt-4.1-nano",
-    system: `You write concise, compelling cover letters. Three short paragraphs maximum. 
+  const hasTemplate = defaultCoverLetter.trim().length > 50
+
+  const system = hasTemplate
+    ? `You are a cover letter editor. Adapt the provided template for the specific role and company.
+Rules:
+- Keep the candidate's voice, tone, and structure from the template
+- Replace any placeholder variables like {{company}}, {{role}}, {{name}}, [Company], [Role] with the actual values
+- Tailor 1-2 sentences to reference something specific about the company or role
+- Do not add new paragraphs or change the overall length
+- Return only the final letter text, no subject line, no commentary`
+    : `You write concise, compelling cover letters. Three short paragraphs maximum.
 No fluff. No "I am writing to express my interest." Start strong with a specific hook.
-Return only the letter text, no subject line.`,
-    prompt: `Write a cover letter for ${userName} applying to the ${match.role} role at ${match.company}.
+Return only the letter text, no subject line.`
+
+  const prompt = hasTemplate
+    ? `Adapt this cover letter template for ${userName} applying to the ${match.role} role at ${match.company}.
+
+Template to adapt:
+${defaultCoverLetter}
+
+Job description (use for tailoring):
+${(match.jobReqContent ?? "").slice(0, 600)}
+
+Candidate résumé (for context):
+${resumeText.slice(0, 400)}`
+    : `Write a cover letter for ${userName} applying to the ${match.role} role at ${match.company}.
 
 Job description:
 ${(match.jobReqContent ?? "").slice(0, 800)}
 
 Candidate résumé:
-${resumeText.slice(0, 800)}`,
+${resumeText.slice(0, 800)}`
+
+  const { text } = await generateText({
+    model: "openai/gpt-4.1-nano",
+    system,
+    prompt,
   })
   return text
 }

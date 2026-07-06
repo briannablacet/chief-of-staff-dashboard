@@ -75,8 +75,6 @@ Return ONLY valid JSON, no markdown, no explanation.`
       role = title
     }
 
-    console.log("[import-job] AI_GATEWAY_API_KEY set:", !!process.env.AI_GATEWAY_API_KEY, "| role:", role, "| company:", company)
-
     const db = await getDb()
 
     // Load directives for resume text and user name
@@ -87,24 +85,49 @@ Return ONLY valid JSON, no markdown, no explanation.`
     const userName = directives?.name || "the applicant"
     const defaultResume = directives?.resumes?.find((r) => r.isDefault) ?? directives?.resumes?.[0]
     const resumeText = defaultResume?.text || directives?.resumeText || ""
+    const defaultCoverLetter = directives?.defaultCoverLetter || ""
+    const hasTemplate = defaultCoverLetter.trim().length > 50
 
     // Generate a cover letter using the job content
     let coverLetter = ""
     const jobContent = text.slice(0, 3000)
     if (jobContent.length > 100) {
       try {
-        const { text: cl } = await generateText({
-          model: "openai/gpt-4.1-nano",
-          system: `You write concise, compelling cover letters. Three short paragraphs maximum.
+        const system = hasTemplate
+          ? `You are a cover letter editor. Adapt the provided template for the specific role and company.
+Rules:
+- Keep the candidate's voice, tone, and structure from the template
+- Replace any placeholder variables like {{company}}, {{role}}, {{name}}, [Company], [Role] with the actual values
+- Tailor 1-2 sentences to reference something specific about the company or role
+- Do not add new paragraphs or change the overall length
+- Return only the final letter text, no subject line, no commentary`
+          : `You write concise, compelling cover letters. Three short paragraphs maximum.
 No fluff. No "I am writing to express my interest." Start strong with a specific hook.
-Return only the letter text, no subject line.`,
-          prompt: `Write a cover letter for ${userName} applying to the ${role} role at ${company}.
+Return only the letter text, no subject line.`
+
+        const prompt = hasTemplate
+          ? `Adapt this cover letter template for ${userName} applying to the ${role} role at ${company}.
+
+Template to adapt:
+${defaultCoverLetter}
+
+Job description (use for tailoring):
+${jobContent.slice(0, 600)}
+
+Candidate résumé (for context):
+${resumeText.slice(0, 400)}`
+          : `Write a cover letter for ${userName} applying to the ${role} role at ${company}.
 
 Job description:
 ${jobContent}
 
 Candidate résumé:
-${resumeText.slice(0, 800)}`,
+${resumeText.slice(0, 800)}`
+
+        const { text: cl } = await generateText({
+          model: "openai/gpt-4.1-nano",
+          system,
+          prompt,
         })
         coverLetter = cl
       } catch (clErr) {
