@@ -32,10 +32,32 @@ fetch('${appUrl}/api/import-job',{method:'POST',headers:{'Content-Type':'applica
   const bookmarkletHref = `javascript:${encodeURIComponent(script)}`
 
   function copyScript() {
-    navigator.clipboard.writeText(bookmarkletHref).then(() => {
+    // navigator.clipboard is blocked in iframes — fall back to execCommand
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(bookmarkletHref).then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }).catch(() => execCommandCopy())
+    } else {
+      execCommandCopy()
+    }
+  }
+
+  function execCommandCopy() {
+    const ta = document.createElement("textarea")
+    ta.value = bookmarkletHref
+    ta.style.position = "fixed"
+    ta.style.opacity = "0"
+    document.body.appendChild(ta)
+    ta.focus()
+    ta.select()
+    try {
+      document.execCommand("copy")
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    })
+    } finally {
+      document.body.removeChild(ta)
+    }
   }
 
   return (
