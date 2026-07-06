@@ -112,15 +112,26 @@ export async function fetchRemotiveJobs(
   maxResults = 30
 ): Promise<RawJob[]> {
   const jobs: RawJob[] = []
+  const seen = new Set<string>()
 
-  for (const title of titles.slice(0, 3)) {
+  // Build search queries: use the full title AND broad keyword extracts
+  // so niche titles like "AI Enablement Manager" also find "AI Manager" results
+  const queries = new Set<string>()
+  for (const title of titles.slice(0, 4)) {
+    queries.add(title) // full phrase
+    const words = title.split(/\s+/).filter((w) => w.length > 3)
+    if (words.length > 1) queries.add(words.slice(0, 2).join(" ")) // first 2 words
+  }
+
+  for (const query of Array.from(queries).slice(0, 5)) {
     try {
-      const query = encodeURIComponent(title)
-      const url = `https://remotive.com/api/remote-jobs?search=${query}&limit=20`
+      const url = `https://remotive.com/api/remote-jobs?search=${encodeURIComponent(query)}&limit=15`
       const res = await fetch(url, { next: { revalidate: 0 } })
       if (!res.ok) continue
       const data = await res.json() as { jobs: RemotiveJob[] }
-      for (const j of (data.jobs ?? []).slice(0, Math.ceil(maxResults / titles.length))) {
+      for (const j of (data.jobs ?? []).slice(0, Math.ceil(maxResults / 3))) {
+        if (seen.has(String(j.id))) continue
+        seen.add(String(j.id))
         jobs.push({
           sourceId: `remotive:${j.id}`,
           source: "remotive",
