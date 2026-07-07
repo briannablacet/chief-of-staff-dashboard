@@ -12,7 +12,6 @@ import { generateText } from "ai"
 import { getDb } from "@/lib/mongodb"
 import type { MatchDoc, DirectivesDoc } from "@/lib/actions"
 
-const USER_ID = "default"
 // Simple shared secret so random people can't post to this endpoint
 const BOOKMARKLET_SECRET = process.env.BOOKMARKLET_SECRET ?? "cos-import"
 
@@ -90,10 +89,13 @@ Return ONLY valid JSON, no markdown, no explanation.`
 
     const db = await getDb()
 
-    // Load directives for resume text and user name
+    // Resolve the real userId from directives — bookmarklet can't carry a session
+    // cookie cross-origin, so we look up the most recently updated directives doc.
     const directives = await db
       .collection<DirectivesDoc>("directives")
-      .findOne({ userId: USER_ID })
+      .findOne({ userId: { $ne: "default" } }, { sort: { updatedAt: -1 } })
+
+    const USER_ID = directives?.userId ?? "default"
 
     const userName = directives?.name || "the applicant"
     const defaultResume = directives?.resumes?.find((r) => r.isDefault) ?? directives?.resumes?.[0]
