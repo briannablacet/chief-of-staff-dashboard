@@ -19,6 +19,7 @@ import {
   Briefcase,
   Clock,
   Trash2,
+  ThumbsDown,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
@@ -33,10 +34,14 @@ import { AtsChecklist } from "@/components/cos/ats-checklist"
 import { CoverLetterLibrary } from "@/components/cos/cover-letter-library"
 
 const statusStyles: Record<MatchDoc["status"], string> = {
-  "New":        "bg-primary/10 text-primary",
-  "Reviewing":  "bg-warning/15 text-warning",
-  "Applied":    "bg-success/15 text-success",
-  "Archived":   "bg-muted text-muted-foreground",
+  "New":          "bg-primary/10 text-primary",
+  "Reviewing":    "bg-warning/15 text-warning",
+  "Applied":      "bg-success/15 text-success",
+  "Interviewing": "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  "Offer":        "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  "Rejected":     "bg-destructive/10 text-destructive",
+  "Not a Fit":    "bg-muted text-muted-foreground line-through",
+  "Archived":     "bg-muted text-muted-foreground",
 }
 
 interface MatchesProps {
@@ -61,6 +66,10 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [clearingAll, setClearingAll] = useState(false)
   const [cleaningUp, setCleaningUp] = useState(false)
+  const [showNotAFit, setShowNotAFit] = useState(false)
+
+  const notAFitCount = matches.filter((m) => m.status === "Not a Fit").length
+  const visibleMatches = showNotAFit ? matches : matches.filter((m) => m.status !== "Not a Fit")
 
   const handleCleanupDefault = async () => {
     setCleaningUp(true)
@@ -98,6 +107,12 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
     if (selected?.matchId === matchId) {
       setSelected((prev) => (prev ? { ...prev, status } : prev))
     }
+  }
+
+  const handleNotAFit = async (e: React.MouseEvent, matchId: string) => {
+    e.stopPropagation()
+    await updateMatchStatus(matchId, "Not a Fit")
+    mutate()
   }
 
   const handleDelete = async (e: React.MouseEvent, matchId: string) => {
@@ -172,6 +187,15 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
           <Badge variant="outline" className="text-success">
             {matches.filter((m) => m.status === "Applied").length} applied
           </Badge>
+          {notAFitCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowNotAFit((v) => !v)}
+              className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+            >
+              {showNotAFit ? `Hide ${notAFitCount} not a fit` : `Show ${notAFitCount} not a fit`}
+            </button>
+          )}
           <Button
             size="sm"
             variant="outline"
@@ -215,7 +239,7 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
         </div>
 
         <ul className="divide-y divide-border">
-          {matches.map((match) => (
+          {visibleMatches.map((match) => (
             <li key={match.matchId} className="flex items-center">
               <button
                 type="button"
@@ -267,6 +291,18 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
                   <ChevronRight className="size-4 text-muted-foreground" />
                 </span>
               </button>
+              {/* Not a Fit button */}
+              {match.status !== "Not a Fit" && (
+                <button
+                  type="button"
+                  onClick={(e) => handleNotAFit(e, match.matchId)}
+                  aria-label="Mark as not a fit"
+                  title="Not a fit"
+                  className="shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <ThumbsDown className="size-4" />
+                </button>
+              )}
               {/* Delete button — always visible */}
               <button
                 type="button"

@@ -49,6 +49,7 @@ const PIPELINE: { status: Status; label: string; color: string }[] = [
   { status: "Interviewing", label: "Interviewing", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
   { status: "Offer",        label: "Offer",        color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300" },
   { status: "Rejected",     label: "Rejected",     color: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
+  { status: "Not a Fit",    label: "Not a Fit",    color: "bg-muted text-muted-foreground line-through" },
 ]
 
 function statusColor(s: Status) {
