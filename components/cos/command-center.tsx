@@ -107,7 +107,7 @@ function DailyDigest({ onNavigate, onNavigateToMatch, profileName, initialMatche
   }, [])
 
   const firstName = profileName?.split(' ')[0] ?? 'there'
-  const topThree = matches.slice(0, 3)
+  const topThree = matches.filter((m) => m.status !== "Not a Fit").slice(0, 3)
 
   const handleRegenerate = async () => {
     setRegenerating(true)
@@ -145,10 +145,13 @@ function DailyDigest({ onNavigate, onNavigateToMatch, profileName, initialMatche
           {matches.length > 0 ? (
             <>
               Good morning, {firstName}. Your agents have found{' '}
-              <span className="font-medium text-foreground">{matches.length} role{matches.length !== 1 ? 's' : ''}</span>{' '}
+              <span className="font-medium text-foreground">{matches.filter((m) => m.status !== 'Not a Fit').length} role{matches.filter((m) => m.status !== 'Not a Fit').length !== 1 ? 's' : ''}</span>{' '}
               that cleared your filters
               {matches.filter((m) => m.status === 'Applied').length > 0 && (
                 <>, with <span className="font-medium text-foreground">{matches.filter((m) => m.status === 'Applied').length} applied</span></>
+              )}
+              {matches.filter((m) => m.status === 'Not a Fit').length > 0 && (
+                <> and <span className="font-medium text-muted-foreground">{matches.filter((m) => m.status === 'Not a Fit').length} passed on</span></>
               )}
               . Here are the top matches.
             </>
@@ -179,6 +182,18 @@ function DailyDigest({ onNavigate, onNavigateToMatch, profileName, initialMatche
                 </div>
                 <div className="flex items-center gap-2">
                   <MatchScore score={match.score} />
+                  {match.status && match.status !== "New" && (
+                    <span className={cn(
+                      "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium",
+                      match.status === "Applied"      && "bg-success/15 text-success",
+                      match.status === "Reviewing"    && "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+                      match.status === "Interviewing" && "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+                      match.status === "Offer"        && "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+                      match.status === "Rejected"     && "bg-destructive/10 text-destructive",
+                    )}>
+                      {match.status}
+                    </span>
+                  )}
                   <Button size="sm" variant="ghost" onClick={() => onNavigateToMatch ? onNavigateToMatch(match.matchId) : onNavigate('matches')}>
                     View Details
                     <ChevronRight data-icon="inline-end" />
