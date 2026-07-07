@@ -44,7 +44,7 @@ async function runPipelineForUser(
     titles = [],
     locations = [],
     remoteOnly = false,
-    salaryMin = 0,
+    salaryMin = 185,
     dealbreakers = [],
     dailyMatchLimit = 10,
     minMatchScore: rawMinScore = 20,
