@@ -518,6 +518,18 @@ function MatchDetail({
     })
   }
 
+  const markNotAFit = () => {
+    startTransition(async () => {
+      try {
+        await updateMatchStatus(match.matchId, "Not a Fit")
+        onStatusChange(match.matchId, "Not a Fit")
+        toast.success(`Marked as Not a Fit`)
+      } catch {
+        toast.error("Failed to update status")
+      }
+    })
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* Back button + title bar */}
@@ -536,6 +548,19 @@ function MatchDetail({
           {match.status !== "Applied" && (
             <Button size="sm" variant="outline" onClick={markApplied} disabled={isPending}>
               Mark as Applied
+            </Button>
+          )}
+          {match.status !== "Not a Fit" && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={markNotAFit}
+              disabled={isPending}
+              aria-label="Not a fit"
+              title="Not a fit"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <ThumbsDown className="size-4" />
             </Button>
           )}
         </div>
