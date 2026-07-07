@@ -275,27 +275,33 @@ function scoreJobKeywords(
   })
 
   // Salary (20 pts)
-  // salaryMin/salaryMax are stored in thousands (e.g. 190 = $190k)
+  // salaryMin is stored in thousands (e.g. 190 = $190k) — normalise to full dollars
   const salaryFloor = salaryMin > 0 ? (salaryMin < 1000 ? salaryMin * 1000 : salaryMin) : 0
   let salaryValue: number | undefined
   let salaryMet = true
   let salaryNote = "Salary not listed — worth asking"
 
   if (job.salary) {
-    const nums = job.salary.match(/[\d,]+/g)?.map((n) => parseInt(n.replace(/,/g, ""))) ?? []
+    // Handle both "$165k–$175k" and "$165,000–$175,000" formats
+    const normalised = job.salary.replace(/k/gi, "000").replace(/\$/g, "")
+    const nums = normalised.match(/[\d,]+/g)?.map((n) => parseInt(n.replace(/,/g, ""), 10)).filter((n) => n > 1000) ?? []
     if (nums.length >= 2) salaryValue = Math.round((nums[0] + nums[1]) / 2)
     else if (nums.length === 1) salaryValue = nums[0]
 
     if (salaryValue) {
       if (salaryFloor > 0 && salaryValue < salaryFloor) {
         salaryMet = false
-        salaryNote = `Listed ~$${(salaryValue / 1000).toFixed(0)}k, floor is $${salaryMin}k`
+        salaryNote = `Listed ~$${Math.round(salaryValue / 1000)}k, your floor is $${Math.round(salaryFloor / 1000)}k`
       } else {
-        salaryNote = `Listed ~$${(salaryValue / 1000).toFixed(0)}k`
+        salaryNote = `Listed ~$${Math.round(salaryValue / 1000)}k`
       }
     }
   }
-  score += salaryMet ? 20 : 5
+
+  // Hard-reject if salary is listed AND below floor — no point surfacing it
+  if (salaryFloor > 0 && salaryValue !== undefined && !salaryMet) return null
+
+  score += salaryMet ? 20 : 0
   breakdown.push({ label: "Compensation", met: salaryMet, note: salaryNote })
 
   // Work model
