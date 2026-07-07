@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useState, useTransition, useRef } from "react"
 import { Plus, X, FileText, UploadCloud, Loader2, Sparkles, ChevronDown, ChevronUp, Download, ArrowLeft, Pencil } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -24,7 +24,9 @@ function initResumes(d: DirectivesDoc | null): ResumeEntry[] {
 }
 
 export function Resumes({ initialDirectives }: ResumesProps) {
-  const d = initialDirectives
+  // Use a ref so persist always reads the latest directives, not the stale closure
+  const dRef = useRef(initialDirectives)
+  const d = dRef.current
   const [resumes, setResumes] = useState<ResumeEntry[]>(() => initResumes(d))
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -39,32 +41,36 @@ export function Resumes({ initialDirectives }: ResumesProps) {
   const persist = (updated: ResumeEntry[], onSuccess?: () => void) => {
     startTransition(async () => {
       try {
+        const latest = dRef.current
         const defaultEntry = updated.find((r) => r.isDefault) ?? updated[0]
         await saveDirectives({
-          name: d?.name ?? "",
-          headline: d?.headline ?? "",
-          titles: d?.titles ?? [],
-          locations: d?.locations ?? [],
-          salaryMin: d?.salaryMin ?? 0,
-          salaryMax: d?.salaryMax ?? 0,
-          remoteOnly: d?.remoteOnly ?? false,
-          dreamCompanies: d?.dreamCompanies ?? [],
-          dealbreakers: d?.dealbreakers ?? [],
-          linkedinUrl: d?.linkedinUrl ?? "",
-          defaultCoverLetter: d?.defaultCoverLetter ?? "",
-          dailyMatchLimit: d?.dailyMatchLimit ?? 10,
-          dailyCoverLetterLimit: d?.dailyCoverLetterLimit ?? 5,
-          minMatchScore: d?.minMatchScore ?? 70,
-          resumeText: defaultEntry?.text ?? d?.resumeText ?? "",
-          resumeFileName: defaultEntry?.fileName ?? d?.resumeFileName ?? "",
+          name: latest?.name ?? "",
+          headline: latest?.headline ?? "",
+          titles: latest?.titles ?? [],
+          locations: latest?.locations ?? [],
+          salaryMin: latest?.salaryMin ?? 0,
+          salaryMax: latest?.salaryMax ?? 0,
+          remoteOnly: latest?.remoteOnly ?? false,
+          dreamCompanies: latest?.dreamCompanies ?? [],
+          dealbreakers: latest?.dealbreakers ?? [],
+          linkedinUrl: latest?.linkedinUrl ?? "",
+          defaultCoverLetter: latest?.defaultCoverLetter ?? "",
+          dailyMatchLimit: latest?.dailyMatchLimit ?? 10,
+          dailyCoverLetterLimit: latest?.dailyCoverLetterLimit ?? 5,
+          minMatchScore: latest?.minMatchScore ?? 70,
+          resumeText: defaultEntry?.text ?? latest?.resumeText ?? "",
+          resumeFileName: defaultEntry?.fileName ?? latest?.resumeFileName ?? "",
           resumes: updated,
         })
         toast.success("Résumé saved")
-        onSuccess?.()
       } catch (err) {
         console.error("[v0] save résumé failed:", err)
         toast.error("Failed to save résumé")
+        return
       }
+      // Call onSuccess after the transition completes, outside the try so
+      // state updates (like setEditingId) are not batched with the transition
+      onSuccess?.()
     })
   }
 
