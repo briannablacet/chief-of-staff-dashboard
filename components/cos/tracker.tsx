@@ -283,7 +283,7 @@ export function Tracker({ initialMatches }: TrackerProps) {
   const { data: matches = initialMatches, mutate } = useSWR<MatchDoc[]>(
     "/api/matches",
     (url: string) => fetch(url).then((r) => r.json()),
-    { fallbackData: initialMatches, revalidateOnFocus: false }
+    { fallbackData: initialMatches, revalidateOnFocus: true, refreshInterval: 30000 }
   )
 
   const [addOpen, setAddOpen] = useState(false)

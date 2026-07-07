@@ -60,8 +60,21 @@ fetch('${appUrl}/api/import-job',{method:'POST',headers:{'Content-Type':'applica
     }
   }
 
+  const isLocalhost = appUrl.includes("localhost") || appUrl.includes("127.0.0.1")
+
   return (
     <div className="mx-auto max-w-2xl space-y-8">
+
+      {/* Localhost warning — bookmarklet can't reach localhost from other tabs */}
+      {isLocalhost && (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+          <strong>Heads up:</strong> This bookmarklet is pointing to{" "}
+          <code className="font-mono text-xs">{appUrl}</code>, which only works on this
+          machine. Deploy to Vercel and set{" "}
+          <code className="font-mono text-xs">NEXT_PUBLIC_APP_URL</code> to your production
+          URL so the bookmarklet works from any browser.
+        </div>
+      )}
 
       {/* Header */}
       <div className="space-y-2">

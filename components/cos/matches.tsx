@@ -57,7 +57,7 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
   const { data: fetchedMatches, mutate, isValidating } = useSWR<MatchDoc[]>(
     "/api/matches",
     (url: string) => fetch(url).then((r) => r.json()),
-    { fallbackData: initialMatches, revalidateOnFocus: false }
+    { fallbackData: initialMatches, revalidateOnFocus: true, refreshInterval: 30000 }
   )
   const matches = fetchedMatches ?? initialMatches
   const [selected, setSelected] = useState<MatchDoc | null>(
