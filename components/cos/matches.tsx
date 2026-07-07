@@ -66,11 +66,11 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
     setCleaningUp(true)
     try {
       const result = await cleanupDefaultUserData()
-      const total = Object.values(result.deleted).reduce((a, b) => a + b, 0)
+      const total = Object.values(result.migrated).reduce((a, b) => a + b, 0)
       mutate()
-      toast.success(`Removed ${total} stale legacy records`)
+      toast.success(total > 0 ? `Migrated ${total} records to your account` : "No legacy records found")
     } catch {
-      toast.error("Cleanup failed")
+      toast.error("Migration failed")
     } finally {
       setCleaningUp(false)
     }

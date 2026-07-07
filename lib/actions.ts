@@ -410,19 +410,22 @@ export async function deleteAllMatches(): Promise<void> {
 }
 
 /**
- * One-time migration: purge all stale documents written under the old
- * hardcoded userId="default" that existed before auth was added.
+ * One-time migration: reassign all documents written under the old
+ * hardcoded userId="default" to the currently signed-in user's real ID.
+ * Safe to run multiple times — a second run will find 0 "default" docs.
  */
-export async function cleanupDefaultUserData(): Promise<{ deleted: Record<string, number> }> {
-  // Require an authenticated user — this is a destructive operation
-  await getUserId()
+export async function cleanupDefaultUserData(): Promise<{ migrated: Record<string, number> }> {
+  const userId = await getUserId()
   const db = await getDb()
   const collections = ["matches", "directives", "agents", "cover_letters"]
-  const deleted: Record<string, number> = {}
+  const migrated: Record<string, number> = {}
   for (const col of collections) {
-    const r = await db.collection(col).deleteMany({ userId: "default" })
-    deleted[col] = r.deletedCount
+    const r = await db.collection(col).updateMany(
+      { userId: "default" },
+      { $set: { userId } }
+    )
+    migrated[col] = r.modifiedCount
   }
   revalidatePath("/")
-  return { deleted }
+  return { migrated }
 }
