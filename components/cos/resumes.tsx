@@ -84,21 +84,17 @@ export function Resumes({ initialDirectives }: ResumesProps) {
   }
 
   const removeResume = (id: string) => {
-    setResumes((prev) => {
-      const wasDefault = prev.find((r) => r.id === id)?.isDefault ?? false
-      const filtered = prev.filter((r) => r.id !== id)
-      if (wasDefault && filtered.length > 0) filtered[0].isDefault = true
-      persist(filtered)
-      return filtered
-    })
+    const wasDefault = resumes.find((r) => r.id === id)?.isDefault ?? false
+    const filtered = resumes.filter((r) => r.id !== id)
+    if (wasDefault && filtered.length > 0) filtered[0] = { ...filtered[0], isDefault: true }
+    setResumes(filtered)
+    persist(filtered)
   }
 
   const setDefault = (id: string) => {
-    setResumes((prev) => {
-      const updated = prev.map((r) => ({ ...r, isDefault: r.id === id }))
-      persist(updated)
-      return updated
-    })
+    const updated = resumes.map((r) => ({ ...r, isDefault: r.id === id }))
+    setResumes(updated)
+    persist(updated)
   }
 
   // ── Edit-view actions ────────────────────────────────────────────────────
