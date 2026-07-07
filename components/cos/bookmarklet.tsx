@@ -24,9 +24,9 @@ fetch('${appUrl}/api/import-job',{method:'POST',headers:{'Content-Type':'applica
 .then(function(r){return r.json();})
 .then(function(j){
   if(j.ok){alert('Saved to Chief of Staff: '+j.role+(j.company?' at '+j.company:''));}
-  else{alert('Error: '+j.error);}
+  else{alert('Chief of Staff error: '+j.error);}
 })
-.catch(function(){alert('Could not reach Chief of Staff. Are you logged in?');});
+.catch(function(e){alert('Could not reach Chief of Staff at ${appUrl}. Try re-dragging the bookmarklet from the app — your saved version may have an outdated URL.');});
 })();`
 
   const bookmarkletHref = `javascript:${encodeURIComponent(script)}`
@@ -85,6 +85,11 @@ fetch('${appUrl}/api/import-job',{method:'POST',headers:{'Content-Type':'applica
         </div>
         <p className="text-sm text-muted-foreground">
           One click on any job page — LinkedIn, company sites, job boards — sends it straight to your Application Tracker. No copy-paste required.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Bookmarklet target:{" "}
+          <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">{appUrl}</code>
+          {" "}— if this looks wrong, set <code className="font-mono text-xs">NEXT_PUBLIC_APP_URL</code> in your project vars.
         </p>
       </div>
 
