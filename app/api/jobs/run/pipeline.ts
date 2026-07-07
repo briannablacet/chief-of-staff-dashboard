@@ -281,12 +281,17 @@ function scoreJobKeywords(
   let salaryMet = true
   let salaryNote = "Salary not listed — worth asking"
 
-  if (job.salary) {
-    // Handle both "$165k–$175k" and "$165,000–$175,000" formats
-    const normalised = job.salary.replace(/k/gi, "000").replace(/\$/g, "")
-    const nums = normalised.match(/[\d,]+/g)?.map((n) => parseInt(n.replace(/,/g, ""), 10)).filter((n) => n > 1000) ?? []
-    if (nums.length >= 2) salaryValue = Math.round((nums[0] + nums[1]) / 2)
-    else if (nums.length === 1) salaryValue = nums[0]
+  if (job.salaryRaw || job.salary) {
+    // Prefer the raw numeric value — avoids string parse bugs entirely
+    if (job.salaryRaw) {
+      salaryValue = job.salaryRaw
+    } else if (job.salary) {
+      // Fallback: parse formatted string, handling "$165k" and "$165,000" forms
+      const normalised = job.salary.replace(/k/gi, "000").replace(/\$/g, "")
+      const nums = normalised.match(/[\d,]+/g)?.map((n) => parseInt(n.replace(/,/g, ""), 10)).filter((n) => n > 1000) ?? []
+      if (nums.length >= 2) salaryValue = Math.round((nums[0] + nums[1]) / 2)
+      else if (nums.length === 1) salaryValue = nums[0]
+    }
 
     if (salaryValue) {
       if (salaryFloor > 0 && salaryValue < salaryFloor) {
@@ -298,9 +303,8 @@ function scoreJobKeywords(
     }
   }
 
-  // Hard-reject if salary is listed AND below floor — no point surfacing it
-  if (salaryFloor > 0 && salaryValue !== undefined && !salaryMet) return null
-
+  // Salary below floor is a heavy penalty but not a hard reject —
+  // some listings are negotiable or the salary data is inaccurate.
   score += salaryMet ? 20 : 0
   breakdown.push({ label: "Compensation", met: salaryMet, note: salaryNote })
 

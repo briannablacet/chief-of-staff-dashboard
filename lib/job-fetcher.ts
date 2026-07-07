@@ -17,7 +17,8 @@ export type RawJob = {
   description: string       // plain text, may be HTML-stripped
   url: string
   postedAt: string          // ISO date string
-  salary?: string
+  salary?: string           // formatted display string e.g. "$185k–$210k"
+  salaryRaw?: number        // raw mid-point in full dollars — avoids string parse bugs
 }
 
 // ---------------------------------------------------------------------------
@@ -50,17 +51,17 @@ export async function fetchAdzunaJobs(
   }
 
   const jobs: RawJob[] = []
-  const perTitle = Math.ceil(maxResults / Math.max(titles.length, 1))
+  // Adzuna cross-posts the same job to every US city — dedup by company+title
+  const seenCompanyTitle = new Set<string>()
 
   for (const title of titles.slice(0, 5)) {
     try {
-      // Don't pass &where — location filtering happens in the scorer.
-      // Passing a city filter here returns 0 results for niche titles.
       const query = encodeURIComponent(remoteOnly ? `${title} remote` : title)
+      // Fetch more results per title so after dedup we still have enough
       const url =
         `https://api.adzuna.com/v1/api/jobs/us/search/1` +
         `?app_id=${appId}&app_key=${appKey}` +
-        `&results_per_page=${perTitle}` +
+        `&results_per_page=50` +
         `&what=${query}` +
         `&content-type=application/json`
 
@@ -72,6 +73,10 @@ export async function fetchAdzunaJobs(
       const data = await res.json() as { results: AdzunaJob[] }
       for (const j of data.results ?? []) {
         if (!isWithinTwoWeeks(j.created)) continue
+        // Skip cross-posted duplicates (same title + company, different city)
+        const key = `${j.company.display_name}|${j.title}`.toLowerCase()
+        if (seenCompanyTitle.has(key)) continue
+        seenCompanyTitle.add(key)
         jobs.push({
           sourceId: `adzuna:${j.id}`,
           source: "adzuna",
@@ -84,7 +89,11 @@ export async function fetchAdzunaJobs(
           salary: j.salary_min && j.salary_max
             ? `$${Math.round(j.salary_min / 1000)}k–$${Math.round(j.salary_max / 1000)}k`
             : undefined,
+          salaryRaw: j.salary_min && j.salary_max
+            ? Math.round((j.salary_min + j.salary_max) / 2)
+            : undefined,
         })
+        if (jobs.length >= maxResults) break
       }
     } catch (err) {
       console.log("[v0] Adzuna error for title", title, err)
@@ -362,9 +371,11 @@ export async function fetchJSearchJobs(
         seen.add(j.job_id)
         const loc = [j.job_city, j.job_state, j.job_country].filter(Boolean).join(", ")
         let salary: string | undefined
+        let salaryRaw: number | undefined
         if (j.job_min_salary && j.job_max_salary) {
           const curr = j.job_salary_currency === "USD" ? "$" : (j.job_salary_currency ?? "$")
           salary = `${curr}${Math.round(j.job_min_salary / 1000)}k–${curr}${Math.round(j.job_max_salary / 1000)}k`
+          salaryRaw = Math.round((j.job_min_salary + j.job_max_salary) / 2)
         }
         jobs.push({
           sourceId: `jsearch:${j.job_id}`,
@@ -376,6 +387,7 @@ export async function fetchJSearchJobs(
           url: j.job_apply_link,
           postedAt: j.job_posted_at_datetime_utc ?? new Date().toISOString(),
           salary,
+          salaryRaw,
         })
       }
     } catch (err) {
