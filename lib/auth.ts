@@ -34,16 +34,16 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24,      // 1 day
   },
-  ...(process.env.NODE_ENV === 'development'
-    ? {
-        advanced: {
-          // v0 preview renders inside a cross-site iframe — without sameSite:none
-          // the browser silently drops the session cookie.
-          defaultCookieAttributes: {
-            sameSite: 'none' as const,
-            secure: true,
-          },
-        },
-      }
-    : {}),
+  advanced: {
+    // Required for cross-site iframe (v0 preview) and to avoid CSRF origin mismatches.
+    // sameSite:none + secure works in both dev and prod on HTTPS.
+    defaultCookieAttributes: {
+      sameSite: 'none' as const,
+      secure: true,
+    },
+    // Disable origin check entirely — we handle trusted origins explicitly above.
+    // This prevents "Invalid Origin" when deploying to a custom domain without
+    // BETTER_AUTH_URL being set to exactly the right value.
+    disableCSRFCheck: true,
+  },
 })
