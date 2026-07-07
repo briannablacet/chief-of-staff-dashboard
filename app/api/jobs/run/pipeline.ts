@@ -34,10 +34,9 @@ export async function runJobPipeline(): Promise<{ saved: number; message?: strin
     defaultCoverLetter = "",
   } = directives
 
-  // Cap at 40 — keyword scoring is less precise than LLM scoring, so we
-  // intentionally let near-matches through. The score is shown in the UI
-  // so the user can still see quality at a glance.
-  const minMatchScore = Math.min(rawMinScore, 40)
+  // Use the configured threshold directly — don't cap it, or low-scoring
+  // jobs will always slip through regardless of what the user sets.
+  const minMatchScore = rawMinScore ?? 30
 
   if (!titles.length) return { saved: 0, message: "No target titles configured" }
 
@@ -186,6 +185,8 @@ function scoreJobKeywords(
   const cityLocations = locations.filter((l) => !l.toLowerCase().includes("remote"))
 
   if (prefersRemote) {
+    // Hard reject when user requires remote — don't just score 0, skip entirely
+    if (remoteOnly && !isRemoteJob) return null
     score += isRemoteJob ? 20 : 0
     breakdown.push({
       label: "Remote work",

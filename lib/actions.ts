@@ -401,3 +401,10 @@ export async function deleteMatch(matchId: string): Promise<void> {
   await db.collection<MatchDoc>("matches").deleteOne({ userId, matchId })
   revalidatePath("/")
 }
+
+export async function deleteAllMatches(): Promise<void> {
+  const userId = await getUserId()
+  const db = await getDb()
+  await db.collection<MatchDoc>("matches").deleteMany({ userId })
+  revalidatePath("/")
+}

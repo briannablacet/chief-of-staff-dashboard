@@ -48,6 +48,17 @@ export function CommandCenter({ onNavigate, onNavigateToMatch, profileName, init
               agent.key === 'thought' ? 'thought-leadership'
               : agent.key === 'scraper' || agent.key === 'scorer' ? 'matches'
               : 'agents'
+            // Use real match count for scraper/scorer agents
+            const realActivity =
+              agent.key === 'scraper' || agent.key === 'scorer'
+                ? initialMatches.length
+                : agent.activity
+            const realLabel =
+              agent.key === 'scraper'
+                ? 'listings saved'
+                : agent.key === 'scorer'
+                ? 'roles matched'
+                : agent.activityLabel
             return (
               <button
                 key={agent.key}
@@ -64,8 +75,8 @@ export function CommandCenter({ onNavigate, onNavigateToMatch, profileName, init
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <div className="text-right">
-                    <p className="text-sm font-semibold tabular-nums text-foreground">{agent.activity}</p>
-                    <p className="text-xs text-muted-foreground">{agent.activityLabel}</p>
+                    <p className="text-sm font-semibold tabular-nums text-foreground">{realActivity}</p>
+                    <p className="text-xs text-muted-foreground">{realLabel}</p>
                   </div>
                   <span className="flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
                     <span className="relative flex size-1.5">
@@ -131,10 +142,19 @@ function DailyDigest({ onNavigate, onNavigateToMatch, profileName, initialMatche
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Good morning, {firstName}. Overnight your staff scanned{' '}
-          <span className="font-medium text-foreground">214 new roles</span>, scored 38 against your
-          criteria, and mapped 11 warm intro paths into your dream companies. Here are the three
-          highest-conviction matches that cleared every filter.
+          {matches.length > 0 ? (
+            <>
+              Good morning, {firstName}. Your agents have found{' '}
+              <span className="font-medium text-foreground">{matches.length} role{matches.length !== 1 ? 's' : ''}</span>{' '}
+              that cleared your filters
+              {matches.filter((m) => m.status === 'Applied').length > 0 && (
+                <>, with <span className="font-medium text-foreground">{matches.filter((m) => m.status === 'Applied').length} applied</span></>
+              )}
+              . Here are the top matches.
+            </>
+          ) : (
+            <>Good morning, {firstName}. No matches yet — head to Agent Setup to configure your job search criteria, then click Run Now.</>
+          )}
         </p>
 
         <div className="flex flex-col gap-3">

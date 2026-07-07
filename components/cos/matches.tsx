@@ -18,6 +18,7 @@ import {
   Building2,
   Briefcase,
   Clock,
+  Trash2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
@@ -26,7 +27,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { updateMatchStatus, saveCoverLetter, saveResumeForMatch, saveCoverLetterToLibrary, saveResumeEntry, type MatchDoc, type ResumeEntry, type CoverLetterEntry } from "@/lib/actions"
+import { updateMatchStatus, saveCoverLetter, saveResumeForMatch, saveCoverLetterToLibrary, saveResumeEntry, deleteMatch, deleteAllMatches, type MatchDoc, type ResumeEntry, type CoverLetterEntry } from "@/lib/actions"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AtsChecklist } from "@/components/cos/ats-checklist"
 import { CoverLetterLibrary } from "@/components/cos/cover-letter-library"
@@ -57,12 +58,44 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
   const [selected, setSelected] = useState<MatchDoc | null>(
     initialSelectedMatchId ? (initialMatches.find((m) => m.matchId === initialSelectedMatchId) ?? null) : null
   )
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [clearingAll, setClearingAll] = useState(false)
+
+  const handleClearAll = async () => {
+    if (!window.confirm("Remove all matches? This cannot be undone.")) return
+    setClearingAll(true)
+    try {
+      await deleteAllMatches()
+      mutate([], false)
+      toast.success("All matches cleared")
+    } catch {
+      toast.error("Failed to clear matches")
+    } finally {
+      setClearingAll(false)
+    }
+  }
+
   const handleStatusChange = (matchId: string, status: MatchDoc["status"]) => {
-    setMatches((prev) =>
-      prev.map((m) => (m.matchId === matchId ? { ...m, status } : m))
+    mutate(
+      matches.map((m) => (m.matchId === matchId ? { ...m, status } : m)),
+      false
     )
     if (selected?.matchId === matchId) {
       setSelected((prev) => (prev ? { ...prev, status } : prev))
+    }
+  }
+
+  const handleDelete = async (e: React.MouseEvent, matchId: string) => {
+    e.stopPropagation()
+    setDeletingId(matchId)
+    try {
+      await deleteMatch(matchId)
+      mutate(matches.filter((m) => m.matchId !== matchId), false)
+      toast.success("Job removed")
+    } catch {
+      toast.error("Failed to remove job")
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -133,6 +166,18 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
             <RefreshCw data-icon="inline-start" className={isValidating ? "animate-spin" : ""} />
             {isValidating ? "Refreshing..." : "Refresh"}
           </Button>
+          {matches.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={clearingAll}
+              onClick={handleClearAll}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 data-icon="inline-start" className="size-3.5" />
+              {clearingAll ? "Clearing..." : "Clear all"}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -147,11 +192,11 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
 
         <ul className="divide-y divide-border">
           {matches.map((match) => (
-            <li key={match.matchId}>
+            <li key={match.matchId} className="flex items-center">
               <button
                 type="button"
                 onClick={() => setSelected(match)}
-                className="grid w-full grid-cols-1 gap-3 px-5 py-4 text-left transition-colors hover:bg-accent/30 md:grid-cols-[1.6fr_0.9fr_1.2fr_0.6fr_auto] md:items-center md:gap-4"
+                className="grid min-w-0 flex-1 grid-cols-1 gap-3 px-5 py-4 text-left transition-colors hover:bg-accent/30 md:grid-cols-[1.6fr_0.9fr_1.2fr_0.6fr_auto] md:items-center md:gap-4"
               >
                 <div className="flex items-center gap-3">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-xs font-semibold text-secondary-foreground">
@@ -178,9 +223,9 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
                   <span
                     className={cn(
                       "inline-flex items-center rounded-md px-2 py-1 text-xs font-semibold tabular-nums",
-                      match.score >= 90
+                      match.score >= 80
                         ? "bg-success/15 text-success"
-                        : match.score >= 85
+                        : match.score >= 60
                           ? "bg-primary/15 text-primary"
                           : "bg-warning/15 text-warning"
                     )}
@@ -197,6 +242,16 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
                   </Badge>
                   <ChevronRight className="size-4 text-muted-foreground" />
                 </span>
+              </button>
+              {/* Delete button — always visible */}
+              <button
+                type="button"
+                onClick={(e) => handleDelete(e, match.matchId)}
+                disabled={deletingId === match.matchId}
+                aria-label="Remove job"
+                className="mr-3 shrink-0 rounded-md p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+              >
+                <Trash2 className="size-4" />
               </button>
             </li>
           ))}
