@@ -17,6 +17,11 @@ export async function runJobPipeline(): Promise<{ saved: number; message?: strin
     .find({})
     .toArray()
 
+  console.log("[v0] pipeline: found", allDirectives.length, "directives docs")
+  allDirectives.forEach((d, i) => {
+    console.log(`[v0] pipeline: directives[${i}] userId=${d.userId} titles=${JSON.stringify(d.titles)} remoteOnly=${d.remoteOnly} minScore=${d.minMatchScore}`)
+  })
+
   if (!allDirectives.length) return { saved: 0, message: "No directives configured" }
 
   let totalSaved = 0
@@ -53,7 +58,11 @@ async function runPipelineForUser(
   // jobs will always slip through regardless of what the user sets.
   const minMatchScore = rawMinScore ?? 30
 
-  if (!titles.length) return 0
+  console.log(`[v0] pipeline user=${USER_ID}: titles=${JSON.stringify(titles)} remoteOnly=${remoteOnly} minScore=${minMatchScore}`)
+  if (!titles.length) {
+    console.log(`[v0] pipeline user=${USER_ID}: no titles configured, skipping`)
+    return 0
+  }
 
   const defaultResume = resumes.find((r) => r.isDefault) ?? resumes[0]
   const resumeForCoverLetter = defaultResume?.text || resumeText
@@ -95,6 +104,7 @@ async function runPipelineForUser(
     return true
   })
 
+  console.log(`[v0] pipeline user=${USER_ID}: fetched ${allJobs.length} total, ${newJobs.length} new after dedup`)
   if (!newJobs.length) {
     await recordLastRun(db, USER_ID)
     return 0
@@ -105,20 +115,30 @@ async function runPipelineForUser(
 
   for (const job of newJobs.slice(0, dailyMatchLimit * 4)) {
     const result = scoreJobKeywords(job, directives, USER_ID)
-    if (!result) continue
-    if (result.score < minMatchScore) continue
+    if (!result) {
+      console.log(`[v0] pipeline: job ${job.sourceId} hard-rejected (remote filter)`)
+      continue
+    }
+    if (result.score < minMatchScore) {
+      console.log(`[v0] pipeline: job ${job.sourceId} score=${result.score} below min=${minMatchScore}`)
+      continue
+    }
 
     // Dealbreaker filter
     const descLower = job.description.toLowerCase()
     const hitsDealbreaker = dealbreakers.some(
       (d) => d.trim() && descLower.includes(d.trim().toLowerCase())
     )
-    if (hitsDealbreaker) continue
+    if (hitsDealbreaker) {
+      console.log(`[v0] pipeline: job ${job.sourceId} hit dealbreaker`)
+      continue
+    }
 
     scored.push(result)
     if (scored.length >= dailyMatchLimit) break
   }
 
+  console.log(`[v0] pipeline user=${USER_ID}: ${scored.length} jobs passed all filters`)
   if (!scored.length) {
     await recordLastRun(db, USER_ID)
     return 0
