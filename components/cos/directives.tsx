@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { saveDirectives, saveAgentConfig } from "@/lib/actions"
 import type { DirectivesDoc, AgentDoc, ResumeEntry } from "@/lib/actions"
 import { agents, type AgentKey } from "@/lib/cos-data"
+import type { ViewKey } from "@/components/cos/app-sidebar"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
@@ -624,7 +625,7 @@ function ResumesTab({ state, set, buildPayload }: TabProps) {
   )
 }
 
-export function AgentsTab({ initialAgentConfigs, onNavigate }: { initialAgentConfigs: AgentDoc[]; onNavigate?: (view: string) => void }) {
+export function AgentsTab({ initialAgentConfigs, onNavigate }: { initialAgentConfigs: AgentDoc[]; onNavigate?: (view: ViewKey) => void }) {
   const [paused, setPaused] = useState<Record<AgentKey, boolean>>(() => {
     const map: Record<string, boolean> = {}
     for (const cfg of initialAgentConfigs) map[cfg.agentId] = !cfg.enabled

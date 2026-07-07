@@ -33,9 +33,10 @@ interface DashboardProps {
   initialCoverLetters: CoverLetterEntry[]
   appUrl: string
   bookmarkletSecret: string
+  user: { name: string; email: string }
 }
 
-export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatches, initialCoverLetters, appUrl, bookmarkletSecret }: DashboardProps) {
+export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatches, initialCoverLetters, appUrl, bookmarkletSecret, user }: DashboardProps) {
   const [view, setView] = useState<ViewKey>("command")
   const [mobileNav, setMobileNav] = useState(false)
   const [directivesTab, setDirectivesTab] = useState<string | undefined>(undefined)
@@ -68,6 +69,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
           profileName={initialDirectives?.name}
           profileHeadline={initialDirectives?.headline}
           onProfileClick={goToProfile}
+          user={user}
         />
       </aside>
 
@@ -81,6 +83,7 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
             profileName={initialDirectives?.name}
             profileHeadline={initialDirectives?.headline}
             onProfileClick={goToProfile}
+            user={user}
           />
         </SheetContent>
       </Sheet>

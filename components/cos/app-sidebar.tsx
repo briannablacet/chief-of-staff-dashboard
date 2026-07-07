@@ -11,9 +11,13 @@ import {
   FileText,
   ClipboardList,
   Bookmark,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { authClient } from '@/lib/auth-client'
+import { useRouter } from 'next/navigation'
 
 export type ViewKey = 'command' | 'staff' | 'directives' | 'matches' | 'thought-leadership' | 'agents' | 'resumes' | 'tracker' | 'bookmarklet'
 
@@ -34,14 +38,23 @@ export function AppSidebar({
   profileName,
   profileHeadline,
   onProfileClick,
-  onNavigateToAgents,
+  user,
 }: {
   active: ViewKey
   onNavigate: (v: ViewKey) => void
   profileName?: string
   profileHeadline?: string
   onProfileClick?: () => void
+  user?: { name: string; email: string }
 }) {
+  const router = useRouter()
+
+  async function handleSignOut() {
+    await authClient.signOut()
+    router.push('/sign-in')
+    router.refresh()
+  }
+
   return (
     <nav
       aria-label="Primary"
@@ -90,7 +103,7 @@ export function AppSidebar({
         })}
       </ul>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
         <button
           type="button"
           onClick={onProfileClick}
@@ -105,13 +118,22 @@ export function AppSidebar({
           </Avatar>
           <div className="min-w-0 leading-tight">
             <p className="truncate text-sm font-medium text-sidebar-foreground">
-              {profileName || "Set up your profile"}
+              {profileName || user?.name || "Set up your profile"}
             </p>
             <p className="truncate text-xs text-muted-foreground">
-              {profileHeadline || "Click to add details"}
+              {profileHeadline || user?.email || "Click to add details"}
             </p>
           </div>
         </button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleSignOut}
+          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <LogOut className="size-4" />
+          Sign out
+        </Button>
       </div>
     </nav>
   )
