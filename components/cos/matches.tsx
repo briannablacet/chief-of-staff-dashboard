@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { updateMatchStatus, saveCoverLetter, saveResumeForMatch, saveCoverLetterToLibrary, saveResumeEntry, deleteMatch, deleteAllMatches, type MatchDoc, type ResumeEntry, type CoverLetterEntry } from "@/lib/actions"
+import { updateMatchStatus, saveCoverLetter, saveResumeForMatch, saveCoverLetterToLibrary, saveResumeEntry, deleteMatch, deleteAllMatches, cleanupDefaultUserData, type MatchDoc, type ResumeEntry, type CoverLetterEntry } from "@/lib/actions"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AtsChecklist } from "@/components/cos/ats-checklist"
 import { CoverLetterLibrary } from "@/components/cos/cover-letter-library"
@@ -60,6 +60,21 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
   )
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [clearingAll, setClearingAll] = useState(false)
+  const [cleaningUp, setCleaningUp] = useState(false)
+
+  const handleCleanupDefault = async () => {
+    setCleaningUp(true)
+    try {
+      const result = await cleanupDefaultUserData()
+      const total = Object.values(result.deleted).reduce((a, b) => a + b, 0)
+      mutate()
+      toast.success(`Removed ${total} stale legacy records`)
+    } catch {
+      toast.error("Cleanup failed")
+    } finally {
+      setCleaningUp(false)
+    }
+  }
 
   const handleClearAll = async () => {
     if (!window.confirm("Remove all matches? This cannot be undone.")) return
@@ -178,6 +193,15 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
               {clearingAll ? "Clearing..." : "Clear all"}
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={cleaningUp}
+            onClick={handleCleanupDefault}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            {cleaningUp ? "Fixing..." : "Fix stale data"}
+          </Button>
         </div>
       </div>
 
