@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Copy, MousePointerClick, ArrowRight, Sparkles } from "lucide-react"
+import { Check, Copy, Bookmark, MousePointerClick, ArrowRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
