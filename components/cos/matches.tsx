@@ -68,8 +68,14 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
   const [cleaningUp, setCleaningUp] = useState(false)
   const [showNotAFit, setShowNotAFit] = useState(false)
 
+  // Statuses that mean the user has already acted — these live in the Tracker, not here
+  const ACTIONED_STATUSES: MatchDoc["status"][] = ["Applied", "Interviewing", "Offer", "Rejected", "Archived"]
+
   const notAFitCount = matches.filter((m) => m.status === "Not a Fit").length
-  const visibleMatches = showNotAFit ? matches : matches.filter((m) => m.status !== "Not a Fit")
+  const actionedCount = matches.filter((m) => ACTIONED_STATUSES.includes(m.status)).length
+  const visibleMatches = matches
+    .filter((m) => !ACTIONED_STATUSES.includes(m.status))
+    .filter((m) => showNotAFit || m.status !== "Not a Fit")
 
   const handleCleanupDefault = async () => {
     setCleaningUp(true)
@@ -184,10 +190,12 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
           <Badge variant="outline" className="text-muted-foreground">
             {matches.length} matches
           </Badge>
-          <Badge variant="outline" className="text-success">
-            {matches.filter((m) => m.status === "Applied").length} applied
-          </Badge>
-          {notAFitCount > 0 && (
+  {actionedCount > 0 && (
+  <span className="text-xs text-muted-foreground">
+    {actionedCount} applied/in-progress in Tracker
+  </span>
+  )}
+  {notAFitCount > 0 && (
             <button
               type="button"
               onClick={() => setShowNotAFit((v) => !v)}
