@@ -8,6 +8,8 @@ import {
   ExternalLink,
   Trash2,
   ChevronDown,
+  ChevronUp,
+  ChevronsUpDown,
   Link2,
   Building2,
   MapPin,
@@ -288,7 +290,18 @@ export function Tracker({ initialMatches }: TrackerProps) {
 
   const [addOpen, setAddOpen] = useState(false)
   const [filterStatus, setFilterStatus] = useState<Status | "all">("all")
+  const [sortField, setSortField] = useState<"date" | "role" | "company">("date")
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
   const [, startTransition] = useTransition()
+
+  const toggleSort = (field: "date" | "role" | "company") => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+    } else {
+      setSortField(field)
+      setSortDir(field === "date" ? "desc" : "asc")
+    }
+  }
 
   const handleDelete = (matchId: string, role: string, company: string) => {
     if (!confirm(`Remove "${role} at ${company}" from your tracker?`)) return
@@ -299,9 +312,21 @@ export function Tracker({ initialMatches }: TrackerProps) {
     })
   }
 
-  const filtered = filterStatus === "all"
-    ? matches
-    : matches.filter((m) => m.status === filterStatus)
+  const filtered = (filterStatus === "all" ? matches : matches.filter((m) => m.status === filterStatus))
+    .slice()
+    .sort((a, b) => {
+      let cmp = 0
+      if (sortField === "date") {
+        const aDate = a.appliedAt ?? a.createdAt ?? ""
+        const bDate = b.appliedAt ?? b.createdAt ?? ""
+        cmp = new Date(aDate).getTime() - new Date(bDate).getTime()
+      } else if (sortField === "role") {
+        cmp = (a.role ?? "").localeCompare(b.role ?? "")
+      } else if (sortField === "company") {
+        cmp = (a.company ?? "").localeCompare(b.company ?? "")
+      }
+      return sortDir === "asc" ? cmp : -cmp
+    })
 
   // Summary counts
   const counts = PIPELINE.reduce((acc, p) => {
@@ -361,9 +386,26 @@ export function Tracker({ initialMatches }: TrackerProps) {
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/40">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Role / Company</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => toggleSort("role")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      Role
+                      {sortField === "role" ? (sortDir === "asc" ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ChevronsUpDown className="size-3 opacity-40" />}
+                    </button>
+                    <span className="opacity-30">/</span>
+                    <button onClick={() => toggleSort("company")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      Company
+                      {sortField === "company" ? (sortDir === "asc" ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ChevronsUpDown className="size-3 opacity-40" />}
+                    </button>
+                  </div>
+                </th>
                 <th className="hidden px-4 py-3 text-left text-xs font-medium text-muted-foreground md:table-cell">Location</th>
-                <th className="hidden px-4 py-3 text-left text-xs font-medium text-muted-foreground lg:table-cell">Added</th>
+                <th className="hidden px-4 py-3 text-left text-xs font-medium text-muted-foreground lg:table-cell">
+                  <button onClick={() => toggleSort("date")} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                    Added
+                    {sortField === "date" ? (sortDir === "asc" ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />) : <ChevronsUpDown className="size-3 opacity-40" />}
+                  </button>
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
                 <th className="hidden px-4 py-3 text-left text-xs font-medium text-muted-foreground xl:table-cell">Notes</th>
                 <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground">Actions</th>
