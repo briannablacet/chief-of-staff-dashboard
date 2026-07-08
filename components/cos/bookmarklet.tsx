@@ -13,9 +13,9 @@ interface BookmarkletProps {
 export function Bookmarklet({ appUrl, secret }: BookmarkletProps) {
   const [copied, setCopied] = useState(false)
 
-  // Single-line script — do NOT use encodeURIComponent, Chrome silently drops
-  // bookmarks with encoded javascript: URLs. Keep it as a plain one-liner.
-  const bookmarkletHref = `javascript:(function(){var t=document.title,u=window.location.href,s=window.getSelection?window.getSelection().toString():'';if(!s){var b=document.body;s=b?b.innerText.slice(0,5000):'';}var d=JSON.stringify({url:u,title:t,text:s,secret:'${secret}'});var e='${appUrl}/api/import-job';fetch(e,{method:'POST',headers:{'Content-Type':'application/json'},body:d}).then(function(r){if(!r.ok){return r.text().then(function(t){throw new Error('HTTP '+r.status+': '+t.slice(0,200));});}return r.json();}).then(function(j){if(j.ok){alert('Saved: '+j.role+(j.company?' at '+j.company:''));}else{alert('Error: '+j.error);}}).catch(function(err){alert('Failed: '+err.message);});})()`
+  // Opens a small popup on YOUR domain — bypasses LinkedIn/Indeed CSP which
+  // blocks fetch() calls to external domains from their pages.
+  const bookmarkletHref = `javascript:(function(){var u=encodeURIComponent(window.location.href),t=encodeURIComponent(document.title),s=encodeURIComponent((window.getSelection?window.getSelection().toString():'')||document.body.innerText.slice(0,5000));window.open('${appUrl}/capture?url='+u+'&title='+t+'&text='+s+'&secret=${secret}','_blank','width=400,height=300,toolbar=no,menubar=no');})()`
 
   function copyScript() {
     // navigator.clipboard is blocked in iframes — fall back to execCommand
