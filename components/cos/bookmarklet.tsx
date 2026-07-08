@@ -35,11 +35,6 @@ fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:d
 
   const bookmarkletHref = `javascript:${encodeURIComponent(script)}`
 
-  // Build the anchor HTML directly — dangerouslySetInnerHTML bypasses React 19's
-  // javascript: URL sanitization, which breaks drag-to-bookmark (useEffect sets
-  // href after mount but the browser captures href at drag time, saving "#").
-  const anchorHtml = `<a href="${bookmarkletHref}" draggable="true" class="inline-flex cursor-grab items-center gap-2 rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary/10 active:cursor-grabbing" style="color:var(--primary);text-decoration:none">&#128278; Save to Chief of Staff</a>`
-
   function copyScript() {
     // navigator.clipboard is blocked in iframes — fall back to execCommand
     if (navigator.clipboard?.writeText) {
@@ -115,12 +110,17 @@ fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:d
               Make sure your bookmarks bar is visible (Cmd+Shift+B on Mac, Ctrl+Shift+B on Windows).
             </p>
             <div className="flex items-center gap-3">
-              {/* dangerouslySetInnerHTML is required — React 19 blocks javascript:
-                  URLs at render time, and useEffect/ref doesn't work because the
-                  browser captures href at drag time before the effect runs. */}
-              <div dangerouslySetInnerHTML={{ __html: anchorHtml }} />
+              {/* iframe serves the anchor from a plain HTML API route — React 19
+                  blocks javascript: URLs in JSX, dangerouslySetInnerHTML breaks
+                  on encoded quotes. An iframe bypasses both issues entirely. */}
+              <iframe
+                src="/api/bookmarklet-link"
+                title="Drag this bookmarklet to your bookmarks bar"
+                scrolling="no"
+                style={{ border: "none", width: 220, height: 48, overflow: "hidden" }}
+              />
               <ArrowRight className="size-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">drag to here</span>
+              <span className="text-sm text-muted-foreground">drag to your bookmarks bar</span>
             </div>
           </div>
         </div>
