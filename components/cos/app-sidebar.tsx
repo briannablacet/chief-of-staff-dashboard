@@ -7,7 +7,6 @@ import {
   Inbox,
   Sparkles,
   PenLine,
-  Bot,
   FileText,
   ClipboardList,
   Bookmark,
@@ -29,7 +28,6 @@ const NAV: { key: ViewKey; label: string; sub: string; icon: typeof Inbox }[] = 
   { key: 'thought-leadership', label: 'Thought Leadership',     sub: 'LinkedIn post ideas',   icon: PenLine },
   { key: 'resumes',            label: 'Résumés',                sub: 'Manage your résumés',   icon: FileText },
   { key: 'directives',         label: 'Settings',               sub: 'Profile & preferences', icon: SlidersHorizontal },
-  { key: 'agents',             label: 'Agent Setup',            sub: 'Configure your agents', icon: Bot },
 ]
 
 export function AppSidebar({

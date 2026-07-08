@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Menu, Bell, Search } from "lucide-react"
 import { AppSidebar, type ViewKey } from "@/components/cos/app-sidebar"
 import { CommandCenter } from "@/components/cos/command-center"
-import { Directives, AgentsTab } from "@/components/cos/directives"
+import { Directives } from "@/components/cos/directives"
 import { Matches } from "@/components/cos/matches"
 import { ThoughtLeadership } from "@/components/cos/thought-leadership"
 import { Resumes } from "@/components/cos/resumes"
@@ -20,7 +20,6 @@ const TITLES: Record<ViewKey, string> = {
   directives: "Settings",
   matches: "Matches & Cover Letters",
   "thought-leadership": "Thought Leadership",
-  agents: "Agent Setup",
   resumes: "Résumés",
   tracker: "Application Tracker",
   bookmarklet: "Job Capture Bookmarklet",
@@ -141,7 +140,6 @@ export function Dashboard({ initialDirectives, initialAgentConfigs, initialMatch
             } initialCoverLetters={initialCoverLetters} />}
           {view === "thought-leadership" && <ThoughtLeadership targetTitles={initialDirectives?.titles} targetCompanies={initialDirectives?.dreamCompanies} />}
           {view === "resumes" && <Resumes initialDirectives={initialDirectives} />}
-          {view === "agents" && <AgentsTab initialAgentConfigs={initialAgentConfigs} onNavigate={navigate} />}
           {view === "tracker" && <Tracker initialMatches={initialMatches} />}
           {view === "bookmarklet" && <Bookmarklet appUrl={appUrl} secret={bookmarkletSecret} />}
         </main>
