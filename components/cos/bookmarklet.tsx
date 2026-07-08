@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { Check, Copy, Bookmark, MousePointerClick, ArrowRight, Sparkles } from "lucide-react"
+import { useState } from "react"
+import { Check, Copy, MousePointerClick, ArrowRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
@@ -12,7 +12,6 @@ interface BookmarkletProps {
 
 export function Bookmarklet({ appUrl, secret }: BookmarkletProps) {
   const [copied, setCopied] = useState(false)
-  const linkRef = useRef<HTMLAnchorElement>(null)
 
   // The bookmarklet script — minified inline JS that runs in the user's browser
   const script = `(function(){
@@ -36,13 +35,10 @@ fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:d
 
   const bookmarkletHref = `javascript:${encodeURIComponent(script)}`
 
-  // React 19 blocks javascript: URLs in href at render time — set it directly on
-  // the DOM element after mount to bypass the sanitization.
-  useEffect(() => {
-    if (linkRef.current) {
-      linkRef.current.setAttribute("href", bookmarkletHref)
-    }
-  }, [bookmarkletHref])
+  // Build the anchor HTML directly — dangerouslySetInnerHTML bypasses React 19's
+  // javascript: URL sanitization, which breaks drag-to-bookmark (useEffect sets
+  // href after mount but the browser captures href at drag time, saving "#").
+  const anchorHtml = `<a href="${bookmarkletHref}" draggable="true" class="inline-flex cursor-grab items-center gap-2 rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary/10 active:cursor-grabbing" style="color:var(--primary);text-decoration:none">&#128278; Save to Chief of Staff</a>`
 
   function copyScript() {
     // navigator.clipboard is blocked in iframes — fall back to execCommand
@@ -119,20 +115,10 @@ fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:d
               Make sure your bookmarks bar is visible (Cmd+Shift+B on Mac, Ctrl+Shift+B on Windows).
             </p>
             <div className="flex items-center gap-3">
-              {/* The actual drag target */}
-  <a
-  ref={linkRef}
-  href="#"
-  onClick={(e) => {
-  e.preventDefault()
-  alert("Drag this button to your bookmarks bar — don't click it here.")
-  }}
-  draggable
-                className="inline-flex cursor-grab items-center gap-2 rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary/10 active:cursor-grabbing"
-              >
-                <Bookmark className="size-4" />
-                Save to Chief of Staff
-              </a>
+              {/* dangerouslySetInnerHTML is required — React 19 blocks javascript:
+                  URLs at render time, and useEffect/ref doesn't work because the
+                  browser captures href at drag time before the effect runs. */}
+              <div dangerouslySetInnerHTML={{ __html: anchorHtml }} />
               <ArrowRight className="size-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">drag to here</span>
             </div>
