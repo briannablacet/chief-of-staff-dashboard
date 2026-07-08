@@ -54,6 +54,7 @@ export type MatchDoc = {
   score: number
   status: "New" | "Reviewing" | "Applied" | "Interviewing" | "Offer" | "Rejected" | "Not a Fit"
   appliedAt?: Date
+  createdAt?: Date
   notes?: string
   source?: "agent" | "manual"
   postedAgo: string
@@ -390,6 +391,7 @@ export async function saveManualMatch(
     jobUrl: data.jobUrl ?? "",
     jobReqContent: data.jobReqContent ?? "",
     notes: data.notes ?? "",
+    createdAt: new Date(),
     updatedAt: new Date(),
   })
   revalidatePath("/")

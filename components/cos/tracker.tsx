@@ -317,8 +317,8 @@ export function Tracker({ initialMatches }: TrackerProps) {
     .sort((a, b) => {
       let cmp = 0
       if (sortField === "date") {
-        const aDate = a.appliedAt ?? a.createdAt ?? ""
-        const bDate = b.appliedAt ?? b.createdAt ?? ""
+        const aDate = a.createdAt ?? a.updatedAt ?? a.appliedAt ?? ""
+        const bDate = b.createdAt ?? b.updatedAt ?? b.appliedAt ?? ""
         cmp = new Date(aDate).getTime() - new Date(bDate).getTime()
       } else if (sortField === "role") {
         cmp = (a.role ?? "").localeCompare(b.role ?? "")
