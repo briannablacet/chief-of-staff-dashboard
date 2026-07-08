@@ -88,21 +88,16 @@ export function StaffOrganization({ initialAgentConfigs }: StaffOrganizationProp
                   </div>
                   <Badge
                     variant="outline"
-                    className={isPaused ? "gap-1.5 text-warning" : "gap-1.5 text-success"}
+                    className={isPaused ? "gap-1.5 text-warning" : "gap-1.5 text-muted-foreground"}
                   >
-                    <span className="relative flex size-2">
-                      {!isPaused && (
-                        <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />
-                      )}
-                      <span
-                        className={
-                          isPaused
-                            ? "relative inline-flex size-2 rounded-full bg-warning"
-                            : "relative inline-flex size-2 rounded-full bg-success"
-                        }
-                      />
-                    </span>
-                    {isPaused ? "Paused" : "Active"}
+                    <span
+                      className={
+                        isPaused
+                          ? "inline-flex size-2 rounded-full bg-warning"
+                          : "inline-flex size-2 rounded-full bg-muted-foreground/40"
+                      }
+                    />
+                    {isPaused ? "Paused" : "Scheduled"}
                   </Badge>
                 </div>
               </CardHeader>
@@ -141,7 +136,7 @@ export function StaffOrganization({ initialAgentConfigs }: StaffOrganizationProp
                       {isPaused ? "Resume Agent" : "Pause Agent"}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {isPaused ? "Currently idle" : "Running autonomously"}
+                      {isPaused ? "Paused — will not run on schedule" : "Runs twice daily, morning and evening"}
                     </span>
                   </Label>
                   <Switch
