@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Check, Copy, Bookmark, MousePointerClick, ArrowRight, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,6 +12,7 @@ interface BookmarkletProps {
 
 export function Bookmarklet({ appUrl, secret }: BookmarkletProps) {
   const [copied, setCopied] = useState(false)
+  const linkRef = useRef<HTMLAnchorElement>(null)
 
   // The bookmarklet script — minified inline JS that runs in the user's browser
   const script = `(function(){
@@ -20,16 +21,28 @@ var u=window.location.href;
 var s=window.getSelection?window.getSelection().toString():'';
 if(!s){var b=document.body;s=b?b.innerText.slice(0,5000):'';}
 var d=JSON.stringify({url:u,title:t,text:s,secret:'${secret}'});
-fetch('${appUrl}/api/import-job',{method:'POST',headers:{'Content-Type':'application/json'},body:d})
-.then(function(r){return r.json();})
+var endpoint='${appUrl}/api/import-job';
+fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:d})
+.then(function(r){
+  if(!r.ok){return r.text().then(function(t){throw new Error('HTTP '+r.status+': '+t.slice(0,200));});}
+  return r.json();
+})
 .then(function(j){
   if(j.ok){alert('Saved to Chief of Staff: '+j.role+(j.company?' at '+j.company:''));}
   else{alert('Chief of Staff error: '+j.error);}
 })
-.catch(function(e){alert('Could not reach Chief of Staff at ${appUrl}. Try re-dragging the bookmarklet from the app — your saved version may have an outdated URL.');});
+.catch(function(e){alert('Error: '+e.message+'\nEndpoint: '+endpoint);});
 })();`
 
   const bookmarkletHref = `javascript:${encodeURIComponent(script)}`
+
+  // React 19 blocks javascript: URLs in href at render time — set it directly on
+  // the DOM element after mount to bypass the sanitization.
+  useEffect(() => {
+    if (linkRef.current) {
+      linkRef.current.setAttribute("href", bookmarkletHref)
+    }
+  }, [bookmarkletHref])
 
   function copyScript() {
     // navigator.clipboard is blocked in iframes — fall back to execCommand
@@ -107,13 +120,14 @@ fetch('${appUrl}/api/import-job',{method:'POST',headers:{'Content-Type':'applica
             </p>
             <div className="flex items-center gap-3">
               {/* The actual drag target */}
-              <a
-                href={bookmarkletHref}
-                onClick={(e) => {
-                  e.preventDefault()
-                  alert("Drag this button to your bookmarks bar — don't click it here.")
-                }}
-                draggable
+  <a
+  ref={linkRef}
+  href="#"
+  onClick={(e) => {
+  e.preventDefault()
+  alert("Drag this button to your bookmarks bar — don't click it here.")
+  }}
+  draggable
                 className="inline-flex cursor-grab items-center gap-2 rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:border-primary hover:bg-primary/10 active:cursor-grabbing"
               >
                 <Bookmark className="size-4" />
