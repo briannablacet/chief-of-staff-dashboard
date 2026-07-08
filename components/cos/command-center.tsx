@@ -105,7 +105,10 @@ function DailyDigest({ onNavigate, onNavigateToMatch, profileName, initialMatche
   }, [])
 
   const firstName = profileName?.split(' ')[0] ?? 'there'
-  const topThree = matches.filter((m) => m.status !== "Not a Fit").slice(0, 3)
+  const ACTIONED = ["Applied", "Interviewing", "Offer", "Rejected", "Archived"]
+  const topThree = matches
+    .filter((m) => m.status !== "Not a Fit" && !ACTIONED.includes(m.status))
+    .slice(0, 3)
 
   const handleRegenerate = async () => {
     setRegenerating(true)
@@ -143,13 +146,10 @@ function DailyDigest({ onNavigate, onNavigateToMatch, profileName, initialMatche
           {matches.length > 0 ? (
             <>
               Good morning, {firstName}. Your agents have found{' '}
-              <span className="font-medium text-foreground">{matches.filter((m) => m.status !== 'Not a Fit').length} role{matches.filter((m) => m.status !== 'Not a Fit').length !== 1 ? 's' : ''}</span>{' '}
-              that cleared your filters
-              {matches.filter((m) => m.status === 'Applied').length > 0 && (
-                <>, with <span className="font-medium text-foreground">{matches.filter((m) => m.status === 'Applied').length} applied</span></>
-              )}
+              <span className="font-medium text-foreground">{topThree.length > 0 ? topThree.length : matches.filter((m) => !ACTIONED.includes(m.status) && m.status !== 'Not a Fit').length} new role{topThree.length !== 1 ? 's' : ''}</span>{' '}
+              worth reviewing
               {matches.filter((m) => m.status === 'Not a Fit').length > 0 && (
-                <> and <span className="font-medium text-muted-foreground">{matches.filter((m) => m.status === 'Not a Fit').length} passed on</span></>
+                <>, with <span className="font-medium text-muted-foreground">{matches.filter((m) => m.status === 'Not a Fit').length} passed on</span></>
               )}
               . Here are the top matches.
             </>
