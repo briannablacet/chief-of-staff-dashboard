@@ -34,11 +34,8 @@ export function CommandCenter({ onNavigate, onNavigateToMatch, profileName, init
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-muted-foreground">Agent Status</h2>
           <Badge variant="outline" className="gap-1.5 text-muted-foreground">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />
-              <span className="relative inline-flex size-2 rounded-full bg-success" />
-            </span>
-            Live
+            <span className="relative inline-flex size-2 rounded-full bg-muted-foreground/40" />
+            Scheduled
           </Badge>
         </div>
         <Card className="divide-y divide-border py-0">
@@ -48,7 +45,6 @@ export function CommandCenter({ onNavigate, onNavigateToMatch, profileName, init
               agent.key === 'thought' ? 'thought-leadership'
               : agent.key === 'scraper' || agent.key === 'scorer' ? 'matches'
               : 'agents'
-            // Use real match count for scraper/scorer agents
             const realActivity =
               agent.key === 'scraper' || agent.key === 'scorer'
                 ? initialMatches.length
@@ -78,12 +74,11 @@ export function CommandCenter({ onNavigate, onNavigateToMatch, profileName, init
                     <p className="text-sm font-semibold tabular-nums text-foreground">{realActivity}</p>
                     <p className="text-xs text-muted-foreground">{realLabel}</p>
                   </div>
-                  <span className="flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
+                  <span className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                     <span className="relative flex size-1.5">
-                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-success opacity-70" />
-                      <span className="relative inline-flex size-1.5 rounded-full bg-success" />
+                      <span className="relative inline-flex size-1.5 rounded-full bg-muted-foreground/50" />
                     </span>
-                    Active
+                    Runs twice daily
                   </span>
                   <ChevronRight className="size-4 text-muted-foreground" />
                 </div>
@@ -91,6 +86,9 @@ export function CommandCenter({ onNavigate, onNavigateToMatch, profileName, init
             )
           })}
         </Card>
+        <p className="text-xs text-muted-foreground px-1">
+          Agents run automatically every morning and evening. Results appear in your New Matches when the next run completes.
+        </p>
       </section>
 
     </div>
