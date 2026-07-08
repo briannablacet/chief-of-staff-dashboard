@@ -232,8 +232,15 @@ function JobTargetsTab({ state, set, buildPayload }: TabProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Match Preferences</CardTitle>
-          <CardDescription>Control the quality bar and daily volume of your matches.</CardDescription>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-base">Match Preferences</CardTitle>
+              <CardDescription>Control the quality bar and daily volume of your matches.</CardDescription>
+            </div>
+            <div className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+              Runs twice daily
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <FieldGroup>
