@@ -56,7 +56,9 @@ async function runPipelineForUser(
 
   // Use the configured threshold directly — don't cap it, or low-scoring
   // jobs will always slip through regardless of what the user sets.
-  const minMatchScore = rawMinScore ?? 30
+  // Default to 15 — JSearch titles often differ slightly from exact keywords
+  // so a strict threshold silently drops valid matches
+  const minMatchScore = rawMinScore ?? 15
 
   console.log(`[v0] pipeline user=${USER_ID}: titles=${JSON.stringify(titles)} remoteOnly=${remoteOnly} minScore=${minMatchScore}`)
   if (!titles.length) {
