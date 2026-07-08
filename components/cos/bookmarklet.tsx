@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Copy, Bookmark, MousePointerClick, ArrowRight, Sparkles } from "lucide-react"
+import { Check, Copy, Bookmark, MousePointerClick, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 
@@ -105,23 +105,19 @@ fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:d
             1
           </div>
           <div className="flex-1 space-y-3">
-            <p className="font-medium text-foreground">Drag this button to your bookmarks bar</p>
+            <p className="font-medium text-foreground">Copy the bookmarklet code</p>
             <p className="text-sm text-muted-foreground">
-              Make sure your bookmarks bar is visible (Cmd+Shift+B on Mac, Ctrl+Shift+B on Windows).
+              Click the button below to copy the bookmarklet to your clipboard.
             </p>
-            <div className="flex items-center gap-3">
-              {/* iframe serves the anchor from a plain HTML API route — React 19
-                  blocks javascript: URLs in JSX, dangerouslySetInnerHTML breaks
-                  on encoded quotes. An iframe bypasses both issues entirely. */}
-              <iframe
-                src="/api/bookmarklet-link"
-                title="Drag this bookmarklet to your bookmarks bar"
-                scrolling="no"
-                style={{ border: "none", width: 220, height: 48, overflow: "hidden" }}
-              />
-              <ArrowRight className="size-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">drag to your bookmarks bar</span>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyScript}
+              className="gap-2"
+            >
+              {copied ? <Check className="size-4 text-green-500" /> : <Copy className="size-4" />}
+              {copied ? "Copied!" : "Copy bookmarklet code"}
+            </Button>
           </div>
         </div>
 
@@ -129,6 +125,24 @@ fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:d
         <div className="flex gap-4 rounded-xl border border-border bg-card p-5">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
             2
+          </div>
+          <div className="flex-1 space-y-2">
+            <p className="font-medium text-foreground">Create a new bookmark manually</p>
+            <p className="text-sm text-muted-foreground">
+              In your browser, right-click the bookmarks bar and choose <strong>Add page</strong> or <strong>Add bookmark</strong>. Give it any name (e.g. "Save to CoS"), then paste the copied code into the <strong>URL</strong> field.
+            </p>
+            <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground space-y-1">
+              <p><strong>Chrome / Edge:</strong> Bookmarks bar → right-click → "Add page..." → paste in URL field</p>
+              <p><strong>Safari:</strong> Bookmarks menu → "Add Bookmark" → edit URL after saving</p>
+              <p><strong>Firefox:</strong> Bookmarks bar → right-click → "Add Bookmark" → paste in Location field</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Step 3 */}
+        <div className="flex gap-4 rounded-xl border border-border bg-card p-5">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+            3
           </div>
           <div className="flex-1 space-y-2">
             <p className="font-medium text-foreground">Browse to any job posting</p>
@@ -144,10 +158,10 @@ fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:d
           </div>
         </div>
 
-        {/* Step 3 */}
+        {/* Step 4 */}
         <div className="flex gap-4 rounded-xl border border-border bg-card p-5">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-            3
+            4
           </div>
           <div className="flex-1 space-y-2">
             <p className="font-medium text-foreground">Click the bookmark</p>
@@ -162,10 +176,10 @@ fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:d
           </div>
         </div>
 
-        {/* Step 4 */}
+        {/* Step 5 */}
         <div className="flex gap-4 rounded-xl border border-border bg-card p-5">
           <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-            4
+            5
           </div>
           <div className="flex-1 space-y-2">
             <p className="font-medium text-foreground">Find it in your Application Tracker</p>
