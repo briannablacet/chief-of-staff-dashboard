@@ -13,27 +13,9 @@ interface BookmarkletProps {
 export function Bookmarklet({ appUrl, secret }: BookmarkletProps) {
   const [copied, setCopied] = useState(false)
 
-  // The bookmarklet script — minified inline JS that runs in the user's browser
-  const script = `(function(){
-var t=document.title;
-var u=window.location.href;
-var s=window.getSelection?window.getSelection().toString():'';
-if(!s){var b=document.body;s=b?b.innerText.slice(0,5000):'';}
-var d=JSON.stringify({url:u,title:t,text:s,secret:'${secret}'});
-var endpoint='${appUrl}/api/import-job';
-fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:d})
-.then(function(r){
-  if(!r.ok){return r.text().then(function(t){throw new Error('HTTP '+r.status+': '+t.slice(0,200));});}
-  return r.json();
-})
-.then(function(j){
-  if(j.ok){alert('Saved to Chief of Staff: '+j.role+(j.company?' at '+j.company:''));}
-  else{alert('Chief of Staff error: '+j.error);}
-})
-.catch(function(e){alert('Error: '+e.message+'\nEndpoint: '+endpoint);});
-})();`
-
-  const bookmarkletHref = `javascript:${encodeURIComponent(script)}`
+  // Single-line script — do NOT use encodeURIComponent, Chrome silently drops
+  // bookmarks with encoded javascript: URLs. Keep it as a plain one-liner.
+  const bookmarkletHref = `javascript:(function(){var t=document.title,u=window.location.href,s=window.getSelection?window.getSelection().toString():'';if(!s){var b=document.body;s=b?b.innerText.slice(0,5000):'';}var d=JSON.stringify({url:u,title:t,text:s,secret:'${secret}'});var e='${appUrl}/api/import-job';fetch(e,{method:'POST',headers:{'Content-Type':'application/json'},body:d}).then(function(r){if(!r.ok){return r.text().then(function(t){throw new Error('HTTP '+r.status+': '+t.slice(0,200));});}return r.json();}).then(function(j){if(j.ok){alert('Saved: '+j.role+(j.company?' at '+j.company:''));}else{alert('Error: '+j.error);}}).catch(function(err){alert('Failed: '+err.message);});})()`
 
   function copyScript() {
     // navigator.clipboard is blocked in iframes — fall back to execCommand
