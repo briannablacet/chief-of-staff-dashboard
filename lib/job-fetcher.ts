@@ -347,7 +347,7 @@ export async function fetchJSearchJobs(
   for (const title of titles.slice(0, 5)) {
     try {
       const query = remoteOnly ? `${title} remote` : title
-      const url = new URL("https://jsearch.p.rapidapi.com/search")
+      const url = new URL("https://jsearch.p.rapidapi.com/search-v2")
       url.searchParams.set("query", query)
       url.searchParams.set("page", "1")
       url.searchParams.set("num_pages", "1")
