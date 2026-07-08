@@ -113,10 +113,11 @@ export function Bookmarklet({ appUrl, secret }: BookmarkletProps) {
             <p className="text-sm text-muted-foreground">
               In your browser, right-click the bookmarks bar and choose <strong>Add page</strong> or <strong>Add bookmark</strong>. Give it any name (e.g. "Save to CoS"), then paste the copied code into the <strong>URL</strong> field.
             </p>
-            <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground space-y-1">
-              <p><strong>Chrome / Edge:</strong> Bookmarks bar → right-click → "Add page..." → paste in URL field</p>
-              <p><strong>Safari:</strong> Bookmarks menu → "Add Bookmark" → edit URL after saving</p>
-              <p><strong>Firefox:</strong> Bookmarks bar → right-click → "Add Bookmark" → paste in Location field</p>
+            <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground space-y-2">
+              <p className="font-semibold text-foreground">Important: do NOT paste into the address bar — Chrome will strip the javascript: prefix.</p>
+              <p><strong>Chrome / Edge:</strong> Right-click bookmarks bar → "Add page..." → delete the URL field contents → paste → Save</p>
+              <p><strong>Firefox:</strong> Right-click bookmarks bar → "Add Bookmark" → paste in the Location field → Save</p>
+              <p><strong>Safari:</strong> Bookmarks menu → "Add Bookmark" → open Bookmarks editor → click the URL → paste → Done</p>
             </div>
           </div>
         </div>
@@ -176,27 +177,7 @@ export function Bookmarklet({ appUrl, secret }: BookmarkletProps) {
         </div>
       </div>
 
-      {/* Fallback copy */}
-      <div className="rounded-xl border border-border bg-muted/30 p-5 space-y-3">
-        <p className="text-sm font-medium text-foreground">Can&apos;t drag? Copy the bookmarklet code instead</p>
-        <p className="text-xs text-muted-foreground">
-          In your browser, create a new bookmark manually, paste this as the URL, and name it "Save to Chief of Staff".
-        </p>
-        <div className="flex items-start gap-2">
-          <code className="flex-1 break-all rounded-lg bg-background border border-border px-3 py-2 text-xs text-muted-foreground font-mono leading-relaxed">
-            {bookmarkletHref.slice(0, 120)}…
-          </code>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={copyScript}
-            className="shrink-0"
-          >
-            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-            {copied ? "Copied" : "Copy"}
-          </Button>
-        </div>
-      </div>
+
 
     </div>
   )
