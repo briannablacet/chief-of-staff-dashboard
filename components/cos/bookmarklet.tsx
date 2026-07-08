@@ -21,13 +21,17 @@ var u=window.location.href;
 var s=window.getSelection?window.getSelection().toString():'';
 if(!s){var b=document.body;s=b?b.innerText.slice(0,5000):'';}
 var d=JSON.stringify({url:u,title:t,text:s,secret:'${secret}'});
-fetch('${appUrl}/api/import-job',{method:'POST',headers:{'Content-Type':'application/json'},body:d})
-.then(function(r){return r.json();})
+var endpoint='${appUrl}/api/import-job';
+fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:d})
+.then(function(r){
+  if(!r.ok){return r.text().then(function(t){throw new Error('HTTP '+r.status+': '+t.slice(0,200));});}
+  return r.json();
+})
 .then(function(j){
   if(j.ok){alert('Saved to Chief of Staff: '+j.role+(j.company?' at '+j.company:''));}
   else{alert('Chief of Staff error: '+j.error);}
 })
-.catch(function(e){alert('Could not reach Chief of Staff at ${appUrl}. Try re-dragging the bookmarklet from the app — your saved version may have an outdated URL.');});
+.catch(function(e){alert('Error: '+e.message+'\nEndpoint: '+endpoint);});
 })();`
 
   const bookmarkletHref = `javascript:${encodeURIComponent(script)}`
