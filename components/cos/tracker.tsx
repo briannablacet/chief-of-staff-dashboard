@@ -317,9 +317,20 @@ export function Tracker({ initialMatches }: TrackerProps) {
     .sort((a, b) => {
       let cmp = 0
       if (sortField === "date") {
-        const aDate = a.createdAt ?? a.updatedAt ?? a.appliedAt ?? ""
-        const bDate = b.createdAt ?? b.updatedAt ?? b.appliedAt ?? ""
-        cmp = new Date(aDate).getTime() - new Date(bDate).getTime()
+        // matchId is the most reliable insertion-order key:
+        // manual entries = "manual:${Date.now()}", agent entries use MongoDB ObjectId prefix
+        const tsFromMatchId = (id: string) => {
+          const parts = id?.split(":")
+          const n = parseInt(parts?.[1] ?? "0", 10)
+          if (!isNaN(n) && n > 0) return n
+          // MongoDB ObjectId: first 4 bytes are unix seconds
+          const hex = parts?.[0] ?? ""
+          const secs = parseInt(hex.slice(0, 8), 16)
+          return isNaN(secs) ? 0 : secs * 1000
+        }
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : tsFromMatchId(a.matchId)
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : tsFromMatchId(b.matchId)
+        cmp = aTime - bTime
       } else if (sortField === "role") {
         cmp = (a.role ?? "").localeCompare(b.role ?? "")
       } else if (sortField === "company") {
