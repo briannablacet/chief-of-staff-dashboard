@@ -17,11 +17,6 @@ export async function runJobPipeline(): Promise<{ saved: number; message?: strin
     .find({})
     .toArray()
 
-  console.log("[v0] pipeline: found", allDirectives.length, "directives docs")
-  allDirectives.forEach((d, i) => {
-    console.log(`[v0] pipeline: directives[${i}] userId=${d.userId} titles=${JSON.stringify(d.titles)} remoteOnly=${d.remoteOnly} minScore=${d.minMatchScore}`)
-  })
-
   if (!allDirectives.length) return { saved: 0, message: "No directives configured" }
 
   let totalSaved = 0
