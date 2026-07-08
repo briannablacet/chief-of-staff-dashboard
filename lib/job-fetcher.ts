@@ -365,8 +365,12 @@ export async function fetchJSearchJobs(
         console.log("[v0] JSearch fetch failed:", res.status, await res.text())
         continue
       }
-      const data = await res.json() as { data: JSearchJob[] }
-      for (const j of (data.data ?? []).slice(0, perTitle)) {
+      const data = await res.json() as { data: JSearchJob[] | { jobs: JSearchJob[] } }
+      // search-v2 wraps results in data.data.jobs; original /search used data.data directly
+      const jobList: JSearchJob[] = Array.isArray(data.data)
+        ? data.data
+        : (data.data as { jobs: JSearchJob[] })?.jobs ?? []
+      for (const j of jobList.slice(0, perTitle)) {
         if (!j.job_id || seen.has(j.job_id)) continue
         if (j.job_posted_at_datetime_utc && !isWithinTwoWeeks(j.job_posted_at_datetime_utc)) continue
         seen.add(j.job_id)
