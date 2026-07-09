@@ -42,7 +42,7 @@ async function runPipelineForUser(
     salaryMin = 185,
     dealbreakers = [],
     dailyMatchLimit = 10,
-    minMatchScore: rawMinScore = 20,
+    minMatchScore: rawMinScore,
     resumeText = "",
     resumes = [],
     name: userName = "the applicant",
@@ -64,24 +64,18 @@ async function runPipelineForUser(
   const defaultResume = resumes.find((r) => r.isDefault) ?? resumes[0]
   const resumeForCoverLetter = defaultResume?.text || resumeText
 
-  // 2. Clear stale agent-sourced matches (older than 3 days)
-  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-  await db.collection<MatchDoc>("matches").deleteMany({
-    userId: USER_ID,
-    matchId: /^(adzuna|remotive|remoteok|wwr|jsearch):/,
-    updatedAt: { $lt: threeDaysAgo },
-  })
-
-  // 3. Build dedup sets from remaining agent matches — by matchId AND by company+role
-  const existing = await db
+  // 2. Only skip jobs the user has explicitly acted on — Applied, Interviewing, Offer, Rejected, Not a Fit.
+  // Everything else (New, unactioned) gets re-scored and upserted so the feed stays fresh.
+  const ACTIONED_STATUSES = ["Applied", "Interviewing", "Offer", "Rejected", "Not a Fit", "Archived"]
+  const actioned = await db
     .collection<MatchDoc>("matches")
     .find(
-      { userId: USER_ID, matchId: /^(adzuna|remotive|remoteok|wwr|jsearch):/ },
+      { userId: USER_ID, status: { $in: ACTIONED_STATUSES } },
       { projection: { matchId: 1, company: 1, role: 1 } }
     )
     .toArray()
-  const existingIds = new Set(existing.map((m) => m.matchId))
-  const existingRoles = new Set(existing.map((m) => `${m.company}|${m.role}`.toLowerCase()))
+  const actionedIds = new Set(actioned.map((m) => m.matchId))
+  const actionedRoles = new Set(actioned.map((m) => `${m.company}|${m.role}`.toLowerCase()))
 
   // 4. Fetch from all sources in parallel
   // Note: Remotive and WWR don't carry senior AI/enablement roles — disabled.
@@ -107,13 +101,14 @@ async function runPipelineForUser(
     seenRolesInBatch.add(roleKey)
     return true
   })
+  // Skip only jobs the user has acted on — let everything else through to re-score
   const newJobs = allJobs.filter((j) => {
-    if (existingIds.has(j.sourceId)) return false
-    if (existingRoles.has(`${j.company}|${j.title}`.toLowerCase())) return false
+    if (actionedIds.has(j.sourceId)) return false
+    if (actionedRoles.has(`${j.company}|${j.title}`.toLowerCase())) return false
     return true
   })
 
-  console.log(`[v0] pipeline user=${USER_ID}: fetched ${allJobs.length} total, ${newJobs.length} new after dedup`)
+  console.log(`[v0] pipeline user=${USER_ID}: fetched ${allJobs.length} total, ${newJobs.length} not yet actioned`)
   if (!newJobs.length) {
     await recordLastRun(db, USER_ID)
     return 0
