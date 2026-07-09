@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
+import { runJobPipeline } from "../run/pipeline"
 
 export const maxDuration = 300
 
@@ -18,9 +19,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Delegate to the run route — POST to itself
-  const base = req.nextUrl.origin
-  const res = await fetch(`${base}/api/jobs/run`, { method: "POST" })
-  const data = await res.json()
-  return NextResponse.json({ cron: true, ...data }, { status: res.status })
+  // Call the pipeline directly — avoids unreliable self-referential HTTP fetch on Vercel
+  const result = await runJobPipeline()
+  return NextResponse.json({ cron: true, ...result })
 }
