@@ -6,9 +6,9 @@ declare global {
 }
 
 function getClientPromise(): Promise<MongoClient> {
-  const uri = process.env.MONGODB_CONNECTION_STRING
+  const uri = process.env.MONGODB_CONNECTION_STRING_2
   if (!uri) {
-    throw new Error("MONGODB_CONNECTION_STRING environment variable is not set")
+    throw new Error("MONGODB_CONNECTION_STRING_2 environment variable is not set")
   }
   if (process.env.NODE_ENV === "development") {
     if (!global._mongoClientPromise) {
