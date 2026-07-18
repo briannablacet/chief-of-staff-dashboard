@@ -6,9 +6,9 @@ declare global {
 }
 
 function getClientPromise(): Promise<MongoClient> {
-  const uri = process.env.MONGODB_CONNECTION_STRING_3
+  const uri = process.env.MONGODB_CONNECTION_STRING_4
   if (!uri) {
-    throw new Error("MONGODB_CONNECTION_STRING_3 environment variable is not set")
+    throw new Error("MONGODB_CONNECTION_STRING_4 environment variable is not set")
   }
   // Cache the client promise globally in both dev and production to avoid
   // opening a new connection on every request (hits Atlas connection limits)
