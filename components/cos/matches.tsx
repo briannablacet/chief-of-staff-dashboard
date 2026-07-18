@@ -353,7 +353,8 @@ function MatchDetail({
   const [savingResumeEdit, setSavingResumeEdit] = useState(false)
   const activeResume = resumes.find((r) => r.id === selectedResumeId) ?? defaultResume
 
-  const handleResumeChange = async (id: string) => {
+  const handleResumeChange = async (id: string | null) => {
+    if (!id) return
     setSelectedResumeId(id)
     setSavingResume(true)
     try {

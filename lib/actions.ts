@@ -52,7 +52,7 @@ export type MatchDoc = {
   workModel: "Remote" | "Hybrid" | "On-site"
   salary: string
   score: number
-  status: "New" | "Reviewing" | "Applied" | "Interviewing" | "Offer" | "Rejected" | "Not a Fit"
+  status: "New" | "Reviewing" | "Applied" | "Interviewing" | "Offer" | "Rejected" | "Not a Fit" | "Archived"
   appliedAt?: Date
   createdAt?: Date
   notes?: string

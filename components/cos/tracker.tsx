@@ -255,7 +255,7 @@ function StatusDropdown({ match, onUpdate }: { match: MatchDoc; onUpdate: () => 
   }
 
   return (
-    <Select value={match.status} onValueChange={(v) => change(v as Status)} disabled={isPending}>
+    <Select value={match.status} onValueChange={(v) => { if (v) change(v as Status) }} disabled={isPending}>
       <SelectTrigger className="h-7 w-36 border-0 bg-transparent px-0 text-xs shadow-none focus:ring-0">
         <Badge className={`pointer-events-none text-xs font-medium ${statusColor(match.status)}`}>
           {statusLabel(match.status)}
