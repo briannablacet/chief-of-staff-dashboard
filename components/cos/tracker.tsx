@@ -129,7 +129,7 @@ function AddJobDialog({ open, onClose, onSaved }: { open: boolean; onClose: () =
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="tj-workmodel">Work model</Label>
-              <Select value={form.workModel} onValueChange={(v) => set("workModel", v as MatchDoc["workModel"])}>
+              <Select value={form.workModel} onValueChange={(v) => { if (v) set("workModel", v as MatchDoc["workModel"]) }}>
                 <SelectTrigger id="tj-workmodel">
                   <SelectValue />
                 </SelectTrigger>
