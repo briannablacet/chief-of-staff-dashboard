@@ -115,22 +115,25 @@ export async function getDirectives(): Promise<DirectivesDoc | null> {
 export async function saveDirectives(
   data: Omit<DirectivesDoc, "_id" | "userId" | "updatedAt">
 ): Promise<void> {
-  const userId = await getUserId()
-  const db = await getDb()
-  // Destructure out _id in case the caller accidentally passed it through
-  const { _id, ...safeData } = data as DirectivesDoc
-  await db.collection<DirectivesDoc>("directives").updateOne(
-    { userId },
-    {
-      $set: {
-        ...safeData,
-        userId,
-        updatedAt: new Date(),
+  try {
+    const userId = await getUserId()
+    const db = await getDb()
+    const { _id, ...safeData } = data as DirectivesDoc
+    await db.collection<DirectivesDoc>("directives").updateOne(
+      { userId },
+      {
+        $set: {
+          ...safeData,
+          userId,
+          updatedAt: new Date(),
+        },
       },
-    },
-    { upsert: true }
-  )
-  revalidatePath("/")
+      { upsert: true }
+    )
+    revalidatePath("/")
+  } catch (err) {
+    console.error("[v0] saveDirectives failed:", err)
+  }
 }
 
 export async function saveResumeEntry(entry: ResumeEntry): Promise<void> {
@@ -357,58 +360,74 @@ export async function updateMatchStatus(
   status: MatchDoc["status"] | undefined,
   patch?: { notes?: string; appliedAt?: Date }
 ): Promise<void> {
-  const userId = await getUserId()
-  const db = await getDb()
-  const update: Partial<MatchDoc> = { updatedAt: new Date(), ...patch }
-  if (status !== undefined) update.status = status
-  await db.collection<MatchDoc>("matches").updateOne(
-    { userId, matchId },
-    { $set: update }
-  )
-  revalidatePath("/")
+  try {
+    const userId = await getUserId()
+    const db = await getDb()
+    const update: Partial<MatchDoc> = { updatedAt: new Date(), ...patch }
+    if (status !== undefined) update.status = status
+    await db.collection<MatchDoc>("matches").updateOne(
+      { userId, matchId },
+      { $set: update }
+    )
+    revalidatePath("/")
+  } catch (err) {
+    console.error("[v0] updateMatchStatus failed:", err)
+  }
 }
 
 export async function saveManualMatch(
   data: Pick<MatchDoc, "company" | "role" | "location" | "workModel" | "salary" | "jobUrl" | "jobReqContent" | "notes">
 ): Promise<void> {
-  const userId = await getUserId()
-  const db = await getDb()
-  const matchId = `manual:${Date.now()}`
-  await db.collection<MatchDoc>("matches").insertOne({
-    userId,
-    matchId,
-    company: data.company,
-    role: data.role,
-    location: data.location ?? "",
-    workModel: data.workModel ?? "On-site",
-    salary: data.salary ?? "",
-    score: 0,
-    status: "New",
-    source: "manual",
-    postedAgo: "Just added",
-    breakdown: [],
-    coverLetter: "",
-    jobUrl: data.jobUrl ?? "",
-    jobReqContent: data.jobReqContent ?? "",
-    notes: data.notes ?? "",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  })
-  revalidatePath("/")
+  try {
+    const userId = await getUserId()
+    const db = await getDb()
+    const matchId = `manual:${Date.now()}`
+    await db.collection<MatchDoc>("matches").insertOne({
+      userId,
+      matchId,
+      company: data.company,
+      role: data.role,
+      location: data.location ?? "",
+      workModel: data.workModel ?? "On-site",
+      salary: data.salary ?? "",
+      score: 0,
+      status: "New",
+      source: "manual",
+      postedAgo: "Just added",
+      breakdown: [],
+      coverLetter: "",
+      jobUrl: data.jobUrl ?? "",
+      jobReqContent: data.jobReqContent ?? "",
+      notes: data.notes ?? "",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    revalidatePath("/")
+  } catch (err) {
+    console.error("[v0] saveManualMatch failed:", err)
+  }
 }
 
 export async function deleteMatch(matchId: string): Promise<void> {
-  const userId = await getUserId()
-  const db = await getDb()
-  await db.collection<MatchDoc>("matches").deleteOne({ userId, matchId })
-  revalidatePath("/")
+  try {
+    const userId = await getUserId()
+    const db = await getDb()
+    await db.collection<MatchDoc>("matches").deleteOne({ userId, matchId })
+    revalidatePath("/")
+  } catch (err) {
+    console.error("[v0] deleteMatch failed:", err)
+  }
 }
 
 export async function deleteAllMatches(): Promise<void> {
-  const userId = await getUserId()
-  const db = await getDb()
-  await db.collection<MatchDoc>("matches").deleteMany({ userId })
-  revalidatePath("/")
+  try {
+    const userId = await getUserId()
+    const db = await getDb()
+    await db.collection<MatchDoc>("matches").deleteMany({ userId })
+    revalidatePath("/")
+  } catch (err) {
+    console.error("[v0] deleteAllMatches failed:", err)
+  }
 }
 
 /**
