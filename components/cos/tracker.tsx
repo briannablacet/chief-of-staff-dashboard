@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react"
 import useSWR from "swr"
+import { fetchMatches } from "@/lib/fetch-matches"
 import { toast } from "sonner"
 import {
   Plus,
@@ -284,7 +285,7 @@ interface TrackerProps {
 export function Tracker({ initialMatches }: TrackerProps) {
   const { data: matches = initialMatches, mutate } = useSWR<MatchDoc[]>(
     "/api/matches",
-    (url: string) => fetch(url).then((r) => r.json()),
+    fetchMatches,
     { fallbackData: initialMatches, revalidateOnFocus: true, refreshInterval: 30000 }
   )
 

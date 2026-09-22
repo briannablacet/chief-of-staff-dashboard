@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react"
 import useSWR from "swr"
+import { fetchMatches } from "@/lib/fetch-matches"
 import { toast } from "sonner"
 import {
   CheckCircle2,
@@ -56,7 +57,7 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
   const [tab, setTab] = useState<"matches" | "cover-letters">("matches")
   const { data: fetchedMatches, mutate, isValidating } = useSWR<MatchDoc[]>(
     "/api/matches",
-    (url: string) => fetch(url).then((r) => r.json()),
+    fetchMatches,
     { fallbackData: initialMatches, revalidateOnFocus: true, refreshInterval: 30000 }
   )
   const matches = fetchedMatches ?? initialMatches
@@ -256,7 +257,7 @@ export function Matches({ initialMatches, initialSelectedMatchId, onMatchSelecte
               >
                 <div className="flex items-center gap-3">
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-xs font-semibold text-secondary-foreground">
-                    {match.company.slice(0, 2)}
+                    {(match.company ?? "").slice(0, 2)}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">
@@ -580,7 +581,7 @@ function MatchDetail({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             <span className="flex size-16 shrink-0 items-center justify-center rounded-xl bg-secondary text-lg font-bold text-secondary-foreground">
-              {match.company.slice(0, 2)}
+              {(match.company ?? "").slice(0, 2)}
             </span>
             <div className="flex flex-col gap-1">
               <h2 className="text-xl font-semibold text-foreground">{match.role}</h2>
