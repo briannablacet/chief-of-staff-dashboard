@@ -112,44 +112,72 @@ export async function getDirectives(): Promise<DirectivesDoc | null> {
   }
 }
 
-export async function saveDirectives(
-  data: Omit<DirectivesDoc, "_id" | "userId" | "updatedAt">
-): Promise<void> {
-  try {
-    const userId = await getUserId()
-    const db = await getDb()
-    const { _id, ...safeData } = data as DirectivesDoc
-    await db.collection<DirectivesDoc>("directives").updateOne(
-      { userId },
-      {
-        $set: {
-          ...safeData,
-          userId,
-          updatedAt: new Date(),
-        },
+// Résumés are deliberately excluded: they're only written through the
+// per-entry actions below, so a page holding a stale or empty copy of the list
+// (e.g. after a failed load) can't overwrite résumés saved elsewhere.
+export type DirectivesInput = Omit<DirectivesDoc, "_id" | "userId" | "updatedAt" | "resumes" | "resumeText" | "resumeFileName">
+
+export async function saveDirectives(data: DirectivesInput): Promise<void> {
+  const userId = await getUserId()
+  const db = await getDb()
+  const { _id, resumes, resumeText, resumeFileName, ...safeData } = data as DirectivesDoc
+  await db.collection<DirectivesDoc>("directives").updateOne(
+    { userId },
+    {
+      $set: {
+        ...safeData,
+        userId,
+        updatedAt: new Date(),
       },
-      { upsert: true }
-    )
-    revalidatePath("/")
-  } catch (err) {
-    console.error("[v0] saveDirectives failed:", err)
-  }
+    },
+    { upsert: true }
+  )
+  revalidatePath("/")
 }
 
-export async function saveResumeEntry(entry: ResumeEntry): Promise<void> {
+// ---------------------------------------------------------------------------
+// Résumés — each action reads the stored list and changes one entry
+// ---------------------------------------------------------------------------
+
+async function updateResumes(update: (existing: ResumeEntry[]) => ResumeEntry[]): Promise<void> {
   const userId = await getUserId()
   const db = await getDb()
   const doc = await db.collection<DirectivesDoc>("directives").findOne({ userId })
   const existing: ResumeEntry[] = doc?.resumes ?? (doc?.resumeText ? [{ id: "default", label: "My Résumé", text: doc.resumeText, fileName: doc.resumeFileName ?? "", isDefault: true }] : [])
-  const updated = existing.some((r) => r.id === entry.id)
-    ? existing.map((r) => r.id === entry.id ? entry : r)
-    : [...existing, entry]
+  const updated = update(existing)
+  if (updated.length > 0 && !updated.some((r) => r.isDefault)) updated[0] = { ...updated[0], isDefault: true }
+  const defaultEntry = updated.find((r) => r.isDefault)
   await db.collection<DirectivesDoc>("directives").updateOne(
     { userId },
-    { $set: { resumes: updated, updatedAt: new Date() } },
+    {
+      $set: {
+        resumes: updated,
+        // Legacy single-résumé fields, still read by older code paths
+        resumeText: defaultEntry?.text ?? "",
+        resumeFileName: defaultEntry?.fileName ?? "",
+        updatedAt: new Date(),
+      },
+    },
     { upsert: true }
   )
   revalidatePath("/")
+}
+
+export async function saveResumeEntry(entry: ResumeEntry): Promise<void> {
+  await updateResumes((existing) => {
+    const list = entry.isDefault ? existing.map((r) => ({ ...r, isDefault: false })) : existing
+    return list.some((r) => r.id === entry.id)
+      ? list.map((r) => r.id === entry.id ? entry : r)
+      : [...list, entry]
+  })
+}
+
+export async function deleteResumeEntry(id: string): Promise<void> {
+  await updateResumes((existing) => existing.filter((r) => r.id !== id))
+}
+
+export async function setDefaultResume(id: string): Promise<void> {
+  await updateResumes((existing) => existing.map((r) => ({ ...r, isDefault: r.id === id })))
 }
 
 // ---------------------------------------------------------------------------
@@ -441,6 +469,12 @@ export async function cleanupDefaultUserData(): Promise<{ migrated: Record<strin
   const collections = ["matches", "directives", "agents", "cover_letters"]
   const migrated: Record<string, number> = {}
   for (const col of collections) {
+    // Directives are one-per-user: migrating a legacy doc onto an account that
+    // already has one would leave two, and reads/writes could hit the wrong one.
+    if (col === "directives" && (await db.collection(col).findOne({ userId }))) {
+      migrated[col] = 0
+      continue
+    }
     const r = await db.collection(col).updateMany(
       { userId: "default" },
       { $set: { userId } }

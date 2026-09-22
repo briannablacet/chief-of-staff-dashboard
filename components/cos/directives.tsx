@@ -5,7 +5,7 @@ import { Target, Ban, FileText, Building2, MapPin, Link2, Plus, X, UploadCloud, 
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { saveDirectives, saveAgentConfig } from "@/lib/actions"
-import type { DirectivesDoc, AgentDoc, ResumeEntry } from "@/lib/actions"
+import type { DirectivesDoc, DirectivesInput, AgentDoc } from "@/lib/actions"
 import { agents, type AgentKey } from "@/lib/cos-data"
 import type { ViewKey } from "@/components/cos/app-sidebar"
 import { Switch } from "@/components/ui/switch"
@@ -30,9 +30,6 @@ interface DirectivesState {
   remoteOnly: boolean
   dreamCompanies: string[]
   dealbreakers: string[]
-  resumeText: string
-  resumeFileName: string
-  resumes: ResumeEntry[]
   linkedinUrl: string
   defaultCoverLetter: string
   dailyMatchLimit: number
@@ -59,13 +56,6 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
     remoteOnly: d?.remoteOnly ?? false,
     dreamCompanies: d?.dreamCompanies ?? [],
     dealbreakers: d?.dealbreakers ?? [],
-    resumeText: d?.resumeText ?? "",
-    resumeFileName: d?.resumeFileName ?? "",
-    resumes: d?.resumes?.length
-      ? d.resumes
-      : d?.resumeText
-        ? [{ id: "default", label: "My Résumé", text: d.resumeText, fileName: d.resumeFileName ?? "", isDefault: true }]
-        : [],
     linkedinUrl: d?.linkedinUrl ?? "",
     defaultCoverLetter: d?.defaultCoverLetter ?? "",
     dailyMatchLimit: d?.dailyMatchLimit ?? 10,
@@ -86,9 +76,6 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
     remoteOnly: state.remoteOnly,
     dreamCompanies: state.dreamCompanies,
     dealbreakers: state.dealbreakers,
-    resumeText: state.resumes.find((r) => r.isDefault)?.text ?? state.resumeText,
-    resumeFileName: state.resumes.find((r) => r.isDefault)?.fileName ?? state.resumeFileName,
-    resumes: state.resumes,
     linkedinUrl: state.linkedinUrl,
     defaultCoverLetter: state.defaultCoverLetter,
     dailyMatchLimit: state.dailyMatchLimit,
@@ -147,7 +134,7 @@ export function Directives({ initialDirectives, initialAgentConfigs, defaultTab 
 interface TabProps {
   state: DirectivesState
   set: <K extends keyof DirectivesState>(key: K, value: DirectivesState[K]) => void
-  buildPayload: () => Omit<DirectivesDoc, "_id" | "userId" | "updatedAt">
+  buildPayload: () => DirectivesInput
 }
 
 function JobTargetsTab({ state, set, buildPayload }: TabProps) {
@@ -504,128 +491,6 @@ function ResumeTab({ state, set, buildPayload }: TabProps) {
               )}
             </Field>
           </FieldGroup>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
-
-function ResumesTab({ state, set, buildPayload }: TabProps) {
-  const [isPending, startTransition] = useTransition()
-
-  const save = () => {
-    startTransition(async () => {
-      try {
-        await saveDirectives(buildPayload())
-        toast.success("Resumes saved")
-      } catch {
-        toast.error("Failed to save")
-      }
-    })
-  }
-
-  const addResume = () => {
-    const id = `resume-${Date.now()}`
-    const newResume: ResumeEntry = {
-      id,
-      label: "",
-      text: "",
-      fileName: "",
-      isDefault: state.resumes.length === 0,
-    }
-    set("resumes", [...state.resumes, newResume])
-  }
-
-  const updateResume = (id: string, patch: Partial<ResumeEntry>) => {
-    set("resumes", state.resumes.map((r) => r.id === id ? { ...r, ...patch } : r))
-  }
-
-  const setDefault = (id: string) => {
-    set("resumes", state.resumes.map((r) => ({ ...r, isDefault: r.id === id })))
-  }
-
-  const removeResume = (id: string) => {
-    const wasDefault = state.resumes.find((r) => r.id === id)?.isDefault ?? false
-    const filtered = state.resumes.filter((r) => r.id !== id)
-    if (wasDefault && filtered.length > 0) filtered[0].isDefault = true
-    set("resumes", filtered)
-  }
-
-  return (
-    <div className="flex flex-col gap-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-base">Your Resumes</CardTitle>
-              <CardDescription>
-                Name each resume by the role type it targets. The default is used for new matches; you can choose a different one per application on the match detail page.
-              </CardDescription>
-            </div>
-            <Button size="sm" variant="outline" onClick={addResume}>
-              <Plus data-icon="inline-start" /> Add resume
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {state.resumes.length === 0 && (
-            <div className="rounded-lg border border-dashed border-border px-6 py-10 text-center">
-              <p className="text-sm font-medium text-foreground">No resumes yet</p>
-              <p className="mt-1 text-xs text-muted-foreground">Click &quot;Add resume&quot; to paste in your first one.</p>
-            </div>
-          )}
-          {state.resumes.map((resume) => (
-            <div key={resume.id} className="flex flex-col gap-3 rounded-lg border border-border bg-background p-4">
-              {/* Name row */}
-              <div className="flex items-center gap-3">
-                <Input
-                  value={resume.label}
-                  onChange={(e) => updateResume(resume.id, { label: e.target.value })}
-                  placeholder="Name this resume, e.g. Senior PM — AI, Head of Product"
-                  className="flex-1 font-medium"
-                />
-                <div className="flex shrink-0 items-center gap-2">
-                  {resume.isDefault ? (
-                    <Badge variant="secondary" className="bg-success/15 text-success">Default</Badge>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="text-xs text-muted-foreground"
-                      onClick={() => setDefault(resume.id)}
-                    >
-                      Set as default
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label="Remove resume"
-                    onClick={() => removeResume(resume.id)}
-                  >
-                    <X />
-                  </Button>
-                </div>
-              </div>
-              {/* Body */}
-              <Textarea
-                value={resume.text}
-                onChange={(e) => updateResume(resume.id, { text: e.target.value })}
-                placeholder="Paste your resume text here..."
-                className="min-h-56 resize-y font-mono text-xs leading-relaxed"
-              />
-              <p className="text-xs text-muted-foreground tabular-nums">{resume.text.length.toLocaleString()} characters</p>
-            </div>
-          ))}
-
-          {state.resumes.length > 0 && (
-            <div className="flex justify-end">
-              <Button onClick={save} disabled={isPending}>
-                {isPending ? "Saving..." : "Save resumes"}
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
