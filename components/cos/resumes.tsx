@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useRef } from "react"
+import { useState, useTransition } from "react"
 import { Plus, X, FileText, UploadCloud, Loader2, Sparkles, ChevronDown, ChevronUp, Download, ArrowLeft, Pencil } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { saveDirectives, type DirectivesDoc, type ResumeEntry } from "@/lib/actions"
+import { saveResumeEntry, deleteResumeEntry, setDefaultResume, type DirectivesDoc, type ResumeEntry } from "@/lib/actions"
 import { parseResumeFile } from "@/lib/parse-resume"
 import { runResumeAtsChecks } from "@/lib/ats-checker"
 import { downloadResumeAsDocx } from "@/lib/export-resume"
@@ -24,10 +24,7 @@ function initResumes(d: DirectivesDoc | null): ResumeEntry[] {
 }
 
 export function Resumes({ initialDirectives }: ResumesProps) {
-  // Use a ref so persist always reads the latest directives, not the stale closure
-  const dRef = useRef(initialDirectives)
-  const d = dRef.current
-  const [resumes, setResumes] = useState<ResumeEntry[]>(() => initResumes(d))
+  const [resumes, setResumes] = useState<ResumeEntry[]>(() => initResumes(initialDirectives))
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [parsing, setParsing] = useState(false)
@@ -38,30 +35,12 @@ export function Resumes({ initialDirectives }: ResumesProps) {
 
   // ── Persist ──────────────────────────────────────────────────────────────
 
-  const persist = (updated: ResumeEntry[], onSuccess?: () => void) => {
+  // Each change goes through a per-entry server action that edits the stored
+  // list, so this page never overwrites résumés it doesn't know about.
+  const persist = (action: () => Promise<void>, onSuccess?: () => void) => {
     startTransition(async () => {
       try {
-        const latest = dRef.current
-        const defaultEntry = updated.find((r) => r.isDefault) ?? updated[0]
-        await saveDirectives({
-          name: latest?.name ?? "",
-          headline: latest?.headline ?? "",
-          titles: latest?.titles ?? [],
-          locations: latest?.locations ?? [],
-          salaryMin: latest?.salaryMin ?? 0,
-          salaryMax: latest?.salaryMax ?? 0,
-          remoteOnly: latest?.remoteOnly ?? false,
-          dreamCompanies: latest?.dreamCompanies ?? [],
-          dealbreakers: latest?.dealbreakers ?? [],
-          linkedinUrl: latest?.linkedinUrl ?? "",
-          defaultCoverLetter: latest?.defaultCoverLetter ?? "",
-          dailyMatchLimit: latest?.dailyMatchLimit ?? 10,
-          dailyCoverLetterLimit: latest?.dailyCoverLetterLimit ?? 5,
-          minMatchScore: latest?.minMatchScore ?? 70,
-          resumeText: defaultEntry?.text ?? latest?.resumeText ?? "",
-          resumeFileName: defaultEntry?.fileName ?? latest?.resumeFileName ?? "",
-          resumes: updated,
-        })
+        await action()
         toast.success("Résumé saved")
       } catch (err) {
         console.error("[v0] save résumé failed:", err)
@@ -94,13 +73,13 @@ export function Resumes({ initialDirectives }: ResumesProps) {
     const filtered = resumes.filter((r) => r.id !== id)
     if (wasDefault && filtered.length > 0) filtered[0] = { ...filtered[0], isDefault: true }
     setResumes(filtered)
-    persist(filtered)
+    persist(() => deleteResumeEntry(id))
   }
 
   const setDefault = (id: string) => {
     const updated = resumes.map((r) => ({ ...r, isDefault: r.id === id }))
     setResumes(updated)
-    persist(updated)
+    persist(() => setDefaultResume(id))
   }
 
   // ── Edit-view actions ────────────────────────────────────────────────────
@@ -146,11 +125,13 @@ export function Resumes({ initialDirectives }: ResumesProps) {
   }
 
   const handleSave = () => {
-    persist(resumes)
+    if (!editingResume) return
+    persist(() => saveResumeEntry(editingResume))
   }
 
   const handleSaveAndClose = () => {
-    persist(resumes, () => setEditingId(null))
+    if (!editingResume) return
+    persist(() => saveResumeEntry(editingResume), () => setEditingId(null))
   }
 
   // ── Edit view ────────────────────────────────────────────────────────────
