@@ -7,9 +7,9 @@
  */
 import { MongoClient } from "mongodb"
 
-const uri = process.env.MONGODB_URI
+const uri = process.env.MONGODB_CONNECTION_STRING
 if (!uri) {
-  console.error("MONGODB_URI is not set")
+  console.error("MONGODB_CONNECTION_STRING is not set")
   process.exit(1)
 }
 
