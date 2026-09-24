@@ -7,6 +7,7 @@ import { generateText } from "ai"
 import { getDb } from "@/lib/mongodb"
 import { fetchAdzunaJobs, fetchRemotiveJobs, fetchRemoteOKJobs, fetchWWRJobs, fetchJSearchJobs, type RawJob } from "@/lib/job-fetcher"
 import type { DirectivesDoc, MatchDoc, AgentDoc } from "@/lib/actions"
+import { findDealbreaker } from "@/lib/dealbreakers"
 
 export async function runJobPipeline(): Promise<{ saved: number; message?: string }> {
   const db = await getDb()
@@ -19,9 +20,18 @@ export async function runJobPipeline(): Promise<{ saved: number; message?: strin
 
   if (!allDirectives.length) return { saved: 0, message: "No directives configured" }
 
+  // One run per user. If a user somehow has several directives docs, use the
+  // most recently updated — running all of them applied a stale doc's
+  // (empty) dealbreakers and old titles alongside the real ones.
+  const byUser = new Map<string, DirectivesDoc>()
+  for (const d of allDirectives) {
+    const current = byUser.get(d.userId)
+    if (!current || new Date(d.updatedAt ?? 0) > new Date(current.updatedAt ?? 0)) byUser.set(d.userId, d)
+  }
+
   let totalSaved = 0
 
-  for (const directives of allDirectives) {
+  for (const directives of byUser.values()) {
     const saved = await runPipelineForUser(db, directives)
     totalSaved += saved
   }
@@ -128,13 +138,11 @@ async function runPipelineForUser(
       continue
     }
 
-    // Dealbreaker filter
-    const descLower = job.description.toLowerCase()
-    const hitsDealbreaker = dealbreakers.some(
-      (d) => d.trim() && descLower.includes(d.trim().toLowerCase())
-    )
-    if (hitsDealbreaker) {
-      console.log(`[v0] pipeline: job ${job.sourceId} hit dealbreaker`)
+    // Dealbreaker filter — title and company too, not just the (often
+    // truncated) description, so e.g. "VP" catches "VP, AI Transformation"
+    const dealbreaker = findDealbreaker(dealbreakers, [job.title, job.company, job.location, job.description])
+    if (dealbreaker) {
+      console.log(`[v0] pipeline: job ${job.sourceId} hit dealbreaker "${dealbreaker}"`)
       continue
     }
 
