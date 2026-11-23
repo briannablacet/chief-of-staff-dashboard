@@ -4,19 +4,38 @@
     {
       "name": "quill-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "/Users/briannablacet/GitHub/quill"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "/Users/briannablacet/GitHub/quill"
+      ],
       "port": 3000
     },
     {
       "name": "cos-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "-p", "3001"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "3001"
+      ],
       "port": 3001
     },
     {
       "name": "odyssey-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "/Users/briannablacet/GitHub/odyssey", "--", "-p", "3002"],
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--prefix",
+        "/Users/briannablacet/GitHub/odyssey",
+        "--",
+        "-p",
+        "3002"
+      ],
       "port": 3002
     }
   ]

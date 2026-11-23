@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
       .collection<MatchDoc>("matches")
       .find({ userId: session.user.id })
       .sort({ score: -1, updatedAt: -1 })
-      .limit(100)
       .toArray()
 
     return NextResponse.json(
