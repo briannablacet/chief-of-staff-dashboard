@@ -649,7 +649,7 @@ export function AgentsTab({ initialAgentConfigs, onNavigate }: { initialAgentCon
         )
       })}
 
-      {/* Job Capture bookmarklet callout */}
+      {/* Add a Job callout */}
       <Card className="xl:col-span-2 border-primary/20 bg-primary/5">
         <CardContent className="flex items-center justify-between gap-4 py-4">
           <div className="flex items-center gap-3">
@@ -665,7 +665,7 @@ export function AgentsTab({ initialAgentConfigs, onNavigate }: { initialAgentCon
             variant="outline"
             size="sm"
             className="shrink-0"
-            onClick={() => onNavigate?.("bookmarklet")}
+            onClick={() => onNavigate?.("add-job")}
           >
             <Bookmark className="size-3.5" data-icon="inline-start" />
             Add a job

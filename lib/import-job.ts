@@ -5,7 +5,7 @@ import type { MatchDoc, DirectivesDoc } from "@/lib/actions"
 /**
  * Shared job-import logic: parse the posting with AI, draft a cover letter
  * from the user's template/résumé, and save it as a manual match.
- * Used by the paste box (session-authed) and the bookmarklet endpoint.
+ * Used by the paste box (POST /api/jobs/import, session-authed).
  */
 export async function importJob(args: {
   userId: string

@@ -19,29 +19,12 @@ export default async function Page() {
     getCoverLetters(),
   ])
 
-  // The bookmarklet must point at the origin the user is signed in on: /capture
-  // needs this origin's session cookie, and briannasnirvana.com is the portfolio
-  // site (no /capture route), so a stale env var there produces a 404.
-  // Prefer the request's own host; env vars are only a fallback.
-  const h = await headers()
-  const host = h.get("x-forwarded-host") ?? h.get("host")
-  const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https")
-  const appUrl = host
-    ? `${proto}://${host}`
-    : (process.env.NEXT_PUBLIC_APP_URL ??
-      (process.env.VERCEL_PROJECT_PRODUCTION_URL
-        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-        : "https://chief.briannasnirvana.com"))
-  const bookmarkletSecret = process.env.BOOKMARKLET_SECRET ?? "cos-import"
-
   return (
     <Dashboard
       initialDirectives={directives}
       initialAgentConfigs={agentConfigs}
       initialMatches={matches}
       initialCoverLetters={coverLetters}
-      appUrl={appUrl}
-      bookmarkletSecret={bookmarkletSecret}
       user={{ name: session.user.name, email: session.user.email }}
     />
   )
