@@ -1,0 +1,132 @@
+import { generateText } from "ai"
+import { getDb } from "@/lib/mongodb"
+import type { MatchDoc, DirectivesDoc } from "@/lib/actions"
+
+/**
+ * Shared job-import logic: parse the posting with AI, draft a cover letter
+ * from the user's template/résumé, and save it as a manual match.
+ * Used by the paste box (session-authed) and the bookmarklet endpoint.
+ */
+export async function importJob(args: {
+  userId: string
+  url: string
+  title: string
+  text: string
+}): Promise<{ role: string; company: string; hasCoverLetter: boolean }> {
+  const { userId, url, title, text } = args
+
+  let role = title
+  let company = ""
+  let location = ""
+  let workModel: MatchDoc["workModel"] = "On-site"
+  let salary = ""
+
+  try {
+    const { text: aiResponse } = await generateText({
+      model: "openai/gpt-4o-mini",
+      prompt: `Extract job details from the following job posting. Return a JSON object with these exact keys:
+- role: job title (string)
+- company: company name (string)
+- location: city/state or "Remote" (string)
+- workModel: one of "Remote", "Hybrid", or "On-site" (string)
+- salary: salary range if mentioned, empty string if not (string)
+
+Page title: ${title}
+Page URL: ${url}
+Page content (may be partial): ${text.slice(0, 3000)}
+
+Return ONLY valid JSON, no markdown, no explanation.`,
+      maxOutputTokens: 200,
+    })
+    const parsed = JSON.parse(aiResponse.trim())
+    role = parsed.role || title
+    company = parsed.company || ""
+    location = parsed.location || ""
+    workModel = (["Remote", "Hybrid", "On-site"].includes(parsed.workModel)
+      ? parsed.workModel
+      : "On-site") as MatchDoc["workModel"]
+    salary = parsed.salary || ""
+  } catch (parseErr) {
+    console.error("[import-job] AI parse failed:", parseErr)
+    role = title
+  }
+
+  const db = await getDb()
+  const directives = await db.collection<DirectivesDoc>("directives").findOne({ userId })
+
+  const userName = directives?.name || "the applicant"
+  const defaultResume = directives?.resumes?.find((r) => r.isDefault) ?? directives?.resumes?.[0]
+  const resumeText = defaultResume?.text || directives?.resumeText || ""
+  const defaultCoverLetter = directives?.defaultCoverLetter || ""
+  const hasTemplate = defaultCoverLetter.trim().length > 50
+
+  let coverLetter = ""
+  const jobContent = text.slice(0, 3000)
+  if (jobContent.length > 100) {
+    try {
+      const system = hasTemplate
+        ? `You are a cover letter editor. Adapt the provided template for the specific role and company.
+Rules:
+- Keep the candidate's voice, tone, and structure from the template
+- Replace any placeholder variables like {{company}}, {{role}}, {{name}}, [Company], [Role] with the actual values
+- Tailor 1-2 sentences to reference something specific about the company or role
+- Do not add new paragraphs or change the overall length
+- Return only the final letter text, no subject line, no commentary`
+        : `You write concise, compelling cover letters. Three short paragraphs maximum.
+No fluff. No "I am writing to express my interest." Start strong with a specific hook.
+Return only the letter text, no subject line.`
+
+      const prompt = hasTemplate
+        ? `Adapt this cover letter template for ${userName} applying to the ${role} role at ${company}.
+
+Template to adapt:
+${defaultCoverLetter}
+
+Job description (use for tailoring):
+${jobContent.slice(0, 600)}
+
+Candidate résumé (for context):
+${resumeText.slice(0, 400)}`
+        : `Write a cover letter for ${userName} applying to the ${role} role at ${company}.
+
+Job description:
+${jobContent}
+
+Candidate résumé:
+${resumeText.slice(0, 800)}`
+
+      const { text: cl } = await generateText({ model: "openai/gpt-4.1-nano", system, prompt })
+      coverLetter = cl
+        .replace(/\[Company\]/gi, company)
+        .replace(/\[Role\]/gi, role)
+        .replace(/\[Name\]/gi, userName)
+        .replace(/\{\{company\}\}/gi, company)
+        .replace(/\{\{role\}\}/gi, role)
+        .replace(/\{\{name\}\}/gi, userName)
+    } catch (clErr) {
+      console.error("[import-job] Cover letter generation failed:", clErr)
+    }
+  }
+
+  await db.collection<MatchDoc>("matches").insertOne({
+    userId,
+    matchId: `manual:${Date.now()}`,
+    company,
+    role,
+    location,
+    workModel,
+    salary,
+    score: 0,
+    status: "New",
+    source: "manual",
+    postedAgo: "Just added",
+    breakdown: [],
+    coverLetter,
+    jobUrl: url,
+    jobReqContent: text.slice(0, 10000),
+    notes: "",
+    updatedAt: new Date(),
+  })
+
+  return { role, company, hasCoverLetter: !!coverLetter }
+}

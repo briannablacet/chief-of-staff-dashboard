@@ -49,7 +49,7 @@ export function Bookmarklet({ appUrl, secret }: BookmarkletProps) {
   const isLocalhost = appUrl.includes("localhost") || appUrl.includes("127.0.0.1")
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="space-y-8">
 
       {/* Localhost warning — bookmarklet can't reach localhost from other tabs */}
       {isLocalhost && (
@@ -66,7 +66,7 @@ export function Bookmarklet({ appUrl, secret }: BookmarkletProps) {
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Bookmark className="size-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">Job Capture Bookmarklet</h2>
+          <h2 className="text-xl font-semibold text-foreground">Optional: one-click bookmarklet</h2>
           <Badge variant="secondary">Beta</Badge>
         </div>
         <p className="text-sm text-muted-foreground">

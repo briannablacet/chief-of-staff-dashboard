@@ -657,8 +657,8 @@ export function AgentsTab({ initialAgentConfigs, onNavigate }: { initialAgentCon
               <Bookmark className="size-5" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-foreground">Job Capture Bookmarklet</p>
-              <p className="text-xs text-muted-foreground">Save any job listing in one click — it gets imported with a tailored cover letter automatically.</p>
+              <p className="text-sm font-semibold text-foreground">Add a Job</p>
+              <p className="text-xs text-muted-foreground">Paste a job link or description — it gets imported with a tailored cover letter automatically.</p>
             </div>
           </div>
           <Button
@@ -668,7 +668,7 @@ export function AgentsTab({ initialAgentConfigs, onNavigate }: { initialAgentCon
             onClick={() => onNavigate?.("bookmarklet")}
           >
             <Bookmark className="size-3.5" data-icon="inline-start" />
-            Set up bookmarklet
+            Add a job
           </Button>
         </CardContent>
       </Card>
